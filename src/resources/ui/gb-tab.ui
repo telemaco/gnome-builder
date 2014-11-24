@@ -2,12 +2,76 @@
 <interface>
   <!-- interface-requires gtk+ 3.8 -->
   <template class="GbTab" parent="GtkBox">
-    <property name="orientation">GTK_ORIENTATION_VERTICAL</property>
     <child>
       <object class="GtkBox" id="header_box">
         <property name="orientation">GTK_ORIENTATION_HORIZONTAL</property>
         <property name="visible">True</property>
         <property name="vexpand">False</property>
+        <style>
+          <class name="linked"/>
+        </style>
+        <child>
+          <object class="GtkButton" id="drag_button">
+            <property name="visible">True</property>
+            <property name="hexpand">False</property>
+            <style>
+              <class name="image-button"/>
+              <class name="tab-drag-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="icon-name">builder-drag-tab</property>
+                <property name="icon-size">1</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkComboBox" id="documents_combo">
+            <property name="visible">True</property>
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkComboBox" id="symbols_combo">
+            <property name="visible">True</property>
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="split_button">
+            <property name="visible">True</property>
+            <property name="hexpand">False</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="icon-name">builder-split-tab</property>
+                <property name="icon-size">1</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="close_button">
+            <property name="visible">True</property>
+            <property name="hexpand">False</property>
+            <style>
+              <class name="tab-close-button"/>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="icon-name">window-close-symbolic</property>
+                <property name="icon-size">1</property>
+              </object>
+            </child>
+          </object>
+        </child>
       </object>
     </child>
     <child>

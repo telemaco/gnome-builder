@@ -950,6 +950,8 @@ gb_editor_tab_constructed (GObject *object)
 
   priv = tab->priv;
 
+  G_OBJECT_CLASS (gb_editor_tab_parent_class)->constructed (object);
+
   if (!priv->document)
     priv->document = gb_editor_document_new ();
 

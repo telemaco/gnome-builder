@@ -4,7 +4,6 @@
   <template class="GbEditorTab" parent="GbTab">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="orientation">horizontal</property>
     <property name="expand">True</property>
     <child internal-child="content">
       <object class="GtkBox" id="content">

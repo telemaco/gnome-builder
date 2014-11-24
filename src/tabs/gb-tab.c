@@ -16,8 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define G_LOG_DOMAIN "tab"
+
 #include <glib/gi18n.h>
 
+#include "gb-log.h"
+#include "gb-notebook.h"
 #include "gb-tab.h"
 
 struct _GbTabPrivate
@@ -25,10 +29,12 @@ struct _GbTabPrivate
   GtkWidget *content;
   GtkWidget *footer_box;
   GtkWidget *header_box;
+  GtkWidget *drag_button;
 
   gchar    *icon_name;
   gchar    *title;
-  gboolean  dirty;
+
+  guint     dirty : 1;
 };
 
 enum {
@@ -53,8 +59,11 @@ G_DEFINE_TYPE_EXTENDED (GbTab, gb_tab, GTK_TYPE_BOX, 0,
                         G_IMPLEMENT_INTERFACE (GTK_TYPE_BUILDABLE,
                                                buildable_init))
 
-static GParamSpec *gParamSpecs [LAST_PROP];
-static guint       gSignals [LAST_SIGNAL];
+static GParamSpec     *gParamSpecs [LAST_PROP];
+static guint           gSignals [LAST_SIGNAL];
+static GtkTargetEntry  gTargets [] = {
+  { "GTK_NOTEBOOK_TAB", GTK_TARGET_SAME_APP, 0 },
+};
 
 GtkWidget *
 gb_tab_get_header_area (GbTab *tab)
@@ -160,6 +169,33 @@ gb_tab_thaw_drag (GbTab *tab)
   g_signal_emit (tab, gSignals[THAW_DRAG], 0);
 }
 
+static gboolean
+gb_tab_on_drag_button_press (GtkWidget      *button,
+                             GdkEventButton *event,
+                             GbTab          *tab)
+{
+  GtkTargetList *source_targets;
+  GtkWidget *parent;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  if ((event->button == GDK_BUTTON_PRIMARY) &&
+      (parent = gtk_widget_get_parent (GTK_WIDGET (tab))) &&
+      GB_IS_NOTEBOOK (parent))
+    {
+      source_targets = gtk_target_list_new (gTargets, G_N_ELEMENTS (gTargets));
+      gtk_drag_begin_with_coordinates (parent, source_targets, GDK_ACTION_MOVE,
+                                       event->button, (GdkEvent *)event,
+                                       event->x, event->y);
+      gtk_target_list_unref (source_targets);
+      RETURN (TRUE);
+    }
+
+  RETURN (FALSE);
+}
+
 static void
 gb_tab_finalize (GObject *object)
 {
@@ -226,20 +262,37 @@ gb_tab_set_property (GObject      *object,
 }
 
 static void
+gb_tab_constructed (GObject *object)
+{
+  GbTab *tab = (GbTab *)object;
+
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  G_OBJECT_CLASS (gb_tab_parent_class)->constructed (object);
+
+  g_signal_connect (tab->priv->drag_button,
+                    "button-press-event",
+                    G_CALLBACK (gb_tab_on_drag_button_press),
+                    tab);
+}
+
+static void
 gb_tab_class_init (GbTabClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
 
+  object_class->constructed = gb_tab_constructed;
   object_class->finalize = gb_tab_finalize;
   object_class->get_property = gb_tab_get_property;
   object_class->set_property = gb_tab_set_property;
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-tab.ui");
-  gtk_widget_class_bind_template_child_private (widget_class, GbTab, header_box);
   gtk_widget_class_bind_template_child_private (widget_class, GbTab, content);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTab, drag_button);
   gtk_widget_class_bind_template_child_private (widget_class, GbTab, footer_box);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTab, header_box);
 
   gParamSpecs [PROP_DIRTY] =
     g_param_spec_boolean ("dirty",
@@ -306,6 +359,9 @@ static void
 gb_tab_init (GbTab *tab)
 {
   tab->priv = gb_tab_get_instance_private (tab);
+
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (tab),
+                                  GTK_ORIENTATION_VERTICAL);
 
   gtk_widget_init_template (GTK_WIDGET (tab));
 }

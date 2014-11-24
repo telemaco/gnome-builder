@@ -160,3 +160,35 @@ GbCommandBar GtkEntry {
     color: #eeeeec;
 }
 
+
+/*
+ * Styling of main window header bar.
+ */
+GbWorkbench GtkHeaderBar {
+    border-bottom: none;
+}
+
+
+/*
+ * Tab header styling.
+ */
+GbTab .tab-close-button {
+    border-right: none;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+GbTab .tab-drag-button {
+    border-left: none;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+#project-title {
+    border-left: none;
+    border-right: none;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
