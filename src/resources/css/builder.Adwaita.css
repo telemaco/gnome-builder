@@ -172,16 +172,18 @@ GbWorkbench GtkHeaderBar {
 /*
  * Tab header styling.
  */
-GbTab .tab-close-button {
-    border-right: none;
-    border-top-right-radius: 0px;
-    border-bottom-right-radius: 0px;
-}
-GbTab .tab-drag-button {
+GtkComboBox.tab-header-first .button {
     border-left: none;
     border-top-left-radius: 0px;
     border-bottom-left-radius: 0px;
 }
+.tab-header-last {
+    border-right: none;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+
 
 #project-title {
     border-left: none;

@@ -74,6 +74,12 @@ gb_tab_get_header_area (GbTab *tab)
 }
 
 GtkWidget *
+gb_tab_get_controls(GbTab *tab)
+{
+  return tab->priv->header_box;
+}
+
+GtkWidget *
 gb_tab_get_footer_area (GbTab *tab)
 {
   g_return_val_if_fail (GB_IS_TAB (tab), NULL);

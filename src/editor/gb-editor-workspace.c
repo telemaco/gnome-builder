@@ -22,6 +22,7 @@
 #include "gb-editor-workspace.h"
 #include "gb-editor-workspace-private.h"
 #include "gb-multi-notebook.h"
+#include "gb-tab-grid.h"
 #include "gb-tree.h"
 
 enum {
@@ -111,6 +112,7 @@ gb_editor_workspace_class_init (GbEditorWorkspaceClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, paned);
 
   g_type_ensure (GB_TYPE_MULTI_NOTEBOOK);
+  g_type_ensure (GB_TYPE_TAB_GRID);
   g_type_ensure (GB_TYPE_TREE);
 }
 

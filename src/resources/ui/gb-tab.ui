@@ -11,12 +11,26 @@
           <class name="linked"/>
         </style>
         <child>
+          <object class="GtkComboBox" id="documents_combo">
+            <property name="visible">True</property>
+            <property name="hexpand">True</property>
+            <style>
+              <class name="tab-header-first"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkComboBox" id="symbols_combo">
+            <property name="visible">True</property>
+            <property name="hexpand">True</property>
+          </object>
+        </child>
+        <child>
           <object class="GtkButton" id="drag_button">
             <property name="visible">True</property>
             <property name="hexpand">False</property>
             <style>
               <class name="image-button"/>
-              <class name="tab-drag-button"/>
             </style>
             <child>
               <object class="GtkImage">
@@ -28,23 +42,12 @@
           </object>
         </child>
         <child>
-          <object class="GtkComboBox" id="documents_combo">
-            <property name="visible">True</property>
-            <property name="hexpand">True</property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkComboBox" id="symbols_combo">
-            <property name="visible">True</property>
-            <property name="hexpand">True</property>
-          </object>
-        </child>
-        <child>
           <object class="GtkButton" id="split_button">
             <property name="visible">True</property>
             <property name="hexpand">False</property>
             <style>
               <class name="image-button"/>
+              <class name="tab-header-last"/>
             </style>
             <child>
               <object class="GtkImage">
@@ -57,10 +60,9 @@
         </child>
         <child>
           <object class="GtkButton" id="close_button">
-            <property name="visible">True</property>
+            <property name="visible">False</property>
             <property name="hexpand">False</property>
             <style>
-              <class name="tab-close-button"/>
               <class name="image-button"/>
             </style>
             <child>
