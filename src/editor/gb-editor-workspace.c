@@ -111,6 +111,7 @@ gb_editor_workspace_class_init (GbEditorWorkspaceClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, multi_notebook);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, paned);
 
+  g_type_ensure (GB_TYPE_EDITOR_TAB);
   g_type_ensure (GB_TYPE_MULTI_NOTEBOOK);
   g_type_ensure (GB_TYPE_TAB_GRID);
   g_type_ensure (GB_TYPE_TREE);

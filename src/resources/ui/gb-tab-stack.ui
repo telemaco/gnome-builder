@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.8 -->
+  <template class="GbTabStack" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">true</property>
+        <property name="orientation">horizontal</property>
+        <style>
+          <class name="linked"/>
+        </style>
+        <child>
+          <object class="GtkComboBox" id="combo">
+            <property name="visible">true</property>
+            <property name="hexpand">true</property>
+            <property name="model">store</property>
+            <style>
+              <class name="tab-header-first"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStack" id="controls">
+            <property name="visible">true</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="move_right">
+            <property name="visible">true</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">true</property>
+                <property name="icon_name">builder-drag-tab</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="close">
+            <property name="visible">true</property>
+            <property name="sensitive">false</property>
+            <style>
+              <class name="image-button"/>
+              <class name="tab-header-last"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">true</property>
+                <property name="icon_name">window-close-symbolic</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkStack" id="stack">
+        <property name="visible">true</property>
+        <property name="expand">true</property>
+      </object>
+    </child>
+  </template>
+  <object class="GtkListStore" id="store">
+    <columns>
+      <!-- column-name tab -->
+      <column type="GbTab"/>
+    </columns>
+  </object>
+</interface>

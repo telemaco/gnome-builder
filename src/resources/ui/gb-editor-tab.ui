@@ -5,6 +5,38 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="expand">True</property>
+    <child internal-child="controls">
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <style>
+          <class name="linked"/>
+        </style>
+        <child>
+          <object class="GtkComboBox" id="symbol_browser">
+            <property name="visible">true</property>
+            <property name="hexpand">true</property>
+            <style>
+              <class name="tab-control-first"/>
+            </style>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="split_button">
+            <property name="visible">True</property>
+            <style>
+              <class name="tab-control-last"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">True</property>
+                <property name="icon_size">1</property>
+                <property name="icon_name">builder-split-tab</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
     <child internal-child="content">
       <object class="GtkBox" id="content">
         <child>
