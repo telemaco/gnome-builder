@@ -813,6 +813,15 @@ gb_editor_commands_scroll_down (GbEditorWorkspace *workspace,
 }
 
 static void
+gb_editor_commands_toggle_split (GbEditorWorkspace *workspace,
+                                 GbEditorTab       *tab)
+{
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  gb_editor_tab_toggle_split (tab);
+}
+
+static void
 gb_editor_commands_scroll_up (GbEditorWorkspace *workspace,
                               GbEditorTab       *tab)
 {
@@ -924,6 +933,7 @@ gb_editor_commands_init (GbEditorWorkspace *workspace)
     { "trim-trailing-space", gb_editor_commands_trim_trailing_space, TRUE },
     { "scroll-down",         gb_editor_commands_scroll_down,         TRUE },
     { "scroll-up",           gb_editor_commands_scroll_up,           TRUE },
+    { "toggle-split",        gb_editor_commands_toggle_split,        TRUE },
     { NULL }
   };
   GSimpleAction *action;

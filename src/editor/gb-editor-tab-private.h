@@ -82,9 +82,12 @@ struct _GbEditorTabPrivate
   GtkProgressBar      *progress_bar;
   GtkRevealer         *revealer;
   GtkScrolledWindow   *scroller;
+  GtkScrolledWindow   *scroller2;
   GbSourceView        *source_view;
+  GbSourceView        *source_view2;
   GdTaggedEntry       *search_entry;
   GdTaggedEntryTag    *search_entry_tag;
+  GtkToggleButton     *split_button;
 
   /*
    * Information about our target file and encoding.

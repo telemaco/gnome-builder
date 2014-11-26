@@ -394,6 +394,17 @@ on_search_entry_focus_out (GdTaggedEntry *entry,
   return FALSE;
 }
 
+void
+gb_editor_tab_toggle_split (GbEditorTab *tab)
+{
+  gboolean active;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  active = gtk_toggle_button_get_active (tab->priv->split_button);
+  gtk_toggle_button_set_active (tab->priv->split_button, !active);
+}
+
 static gboolean
 do_delayed_animation (gpointer data)
 {
@@ -936,6 +947,20 @@ transform_file_to_title (GBinding     *binding,
 }
 
 static void
+gb_editor_tab_split_toggled (GbEditorTab     *tab,
+                             GtkToggleButton *button)
+{
+  gboolean active;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+  g_return_if_fail (GTK_IS_TOGGLE_BUTTON (button));
+
+  active = gtk_toggle_button_get_active (button);
+
+  gtk_widget_set_visible (GTK_WIDGET (tab->priv->scroller2), active);
+}
+
+static void
 gb_editor_tab_constructed (GObject *object)
 {
   GtkSourceCompletion *comp;
@@ -956,6 +981,8 @@ gb_editor_tab_constructed (GObject *object)
     priv->document = gb_editor_document_new ();
 
   gtk_text_view_set_buffer (GTK_TEXT_VIEW (priv->source_view),
+                            GTK_TEXT_BUFFER (priv->document));
+  gtk_text_view_set_buffer (GTK_TEXT_VIEW (priv->source_view2),
                             GTK_TEXT_BUFFER (priv->document));
 
   if (!priv->file)
@@ -980,7 +1007,11 @@ gb_editor_tab_constructed (GObject *object)
                   "search-context", priv->search_context,
                   "search-settings", priv->search_settings,
                   NULL);
+
   g_object_set (priv->source_view,
+                "search-highlighter", priv->search_highlighter,
+                NULL);
+  g_object_set (priv->source_view2,
                 "search-highlighter", priv->search_highlighter,
                 NULL);
 
@@ -996,6 +1027,8 @@ gb_editor_tab_constructed (GObject *object)
                             "cursor-moved",
                             G_CALLBACK (gb_editor_tab_cursor_moved),
                             tab);
+
+  /* TODO: attach source view abstraction */
 
   g_signal_connect (priv->source_view,
                     "focus-in-event",
@@ -1105,10 +1138,11 @@ gb_editor_tab_constructed (GObject *object)
                     G_CALLBACK (on_vim_notify_mode),
                     tab);
 
-#if 0
-  g_settings_bind (settings, "word-completion", tab, "enable-word-completion",
-                   G_SETTINGS_BIND_DEFAULT);
-#endif
+  g_signal_connect_object (priv->split_button,
+                           "toggled",
+                           G_CALLBACK (gb_editor_tab_split_toggled),
+                           tab,
+                           G_CONNECT_SWAPPED);
 
   gb_editor_tab_cursor_moved (tab, priv->document);
 
@@ -1336,8 +1370,11 @@ gb_editor_tab_class_init (GbEditorTabClass *klass)
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, progress_bar);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, revealer);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, scroller);
+  gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, scroller2);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, search_entry);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, source_view);
+  gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, source_view2);
+  gtk_widget_class_bind_template_child_private (widget_class, GbEditorTab, split_button);
 
   g_type_ensure (GB_TYPE_EDITOR_DOCUMENT);
   g_type_ensure (GB_TYPE_SOURCE_CHANGE_MONITOR);
