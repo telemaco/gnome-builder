@@ -62,6 +62,10 @@
                       </object>
                     </child>
                   </object>
+                  <packing>
+                    <property name="resize">True</property>
+                    <property name="shrink">False</property>
+                  </packing>
                 </child>
                 <child>
                   <object class="GtkScrolledWindow" id="scroller2">
@@ -77,6 +81,10 @@
                       </object>
                     </child>
                   </object>
+                  <packing>
+                    <property name="resize">True</property>
+                    <property name="shrink">False</property>
+                  </packing>
                 </child>
               </object>
             </child>
