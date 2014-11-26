@@ -16,8 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define G_LOG_DOMAIN "tab-stack"
+
 #include <glib/gi18n.h>
 
+#include "gb-log.h"
 #include "gb-tab-stack.h"
 
 struct _GbTabStackPrivate
@@ -163,16 +166,18 @@ gb_tab_stack_focus_next (GbTabStack *stack)
   GtkTreeIter iter;
   gboolean ret = FALSE;
 
+  ENTRY;
+
   g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
 
   if (!(child = gtk_stack_get_visible_child (stack->priv->stack)))
-    return FALSE;
+    RETURN (FALSE);
 
   if (gb_tab_stack_get_tab_iter (stack, GB_TAB (child), &iter) &&
       gtk_tree_model_iter_next (GTK_TREE_MODEL (stack->priv->store), &iter))
     ret = gb_tab_stack_focus_iter (stack, &iter);
 
-  return ret;
+  RETURN (ret);
 }
 
 gboolean
@@ -182,16 +187,18 @@ gb_tab_stack_focus_previous (GbTabStack *stack)
   GtkTreeIter iter;
   gboolean ret = FALSE;
 
+  ENTRY;
+
   g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
 
   if (!(child = gtk_stack_get_visible_child (stack->priv->stack)))
-    return FALSE;
+    RETURN (FALSE);
 
   if (gb_tab_stack_get_tab_iter (stack, GB_TAB (child), &iter) &&
       gtk_tree_model_iter_previous (GTK_TREE_MODEL (stack->priv->store), &iter))
     ret = gb_tab_stack_focus_iter (stack, &iter);
 
-  return ret;
+  RETURN (ret);
 }
 
 gboolean
@@ -199,13 +206,38 @@ gb_tab_stack_focus_first (GbTabStack *stack)
 {
   GtkTreeIter iter;
 
+  ENTRY;
+
   g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
 
   if (gtk_tree_model_get_iter_first (GTK_TREE_MODEL (stack->priv->store),
                                      &iter))
-    return gb_tab_stack_focus_iter (stack, &iter);
+    RETURN (gb_tab_stack_focus_iter (stack, &iter));
 
-  return FALSE;
+  RETURN (FALSE);
+}
+
+gboolean
+gb_tab_stack_focus_last (GbTabStack *stack)
+{
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+  guint n_children;
+
+  ENTRY;
+
+  g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
+
+  model = GTK_TREE_MODEL (stack->priv->store);
+  n_children = gtk_tree_model_iter_n_children (model, NULL);
+
+  if (n_children != 0)
+    {
+      if (gtk_tree_model_iter_nth_child (model, &iter, NULL, n_children-1))
+        RETURN (gb_tab_stack_focus_iter (stack, &iter));
+    }
+
+  RETURN (FALSE);
 }
 
 gboolean

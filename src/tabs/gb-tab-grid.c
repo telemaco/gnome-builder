@@ -27,13 +27,50 @@
 
 struct _GbTabGridPrivate
 {
-  GtkWidget *top_hpaned;
+  GSimpleActionGroup *actions;
+
+  GtkWidget          *top_hpaned;
+  GbTabStack         *last_focused_stack;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbTabGrid, gb_tab_grid, GTK_TYPE_BIN)
 
 static GtkWidget *
 gb_tab_grid_get_first_stack (GbTabGrid*);
+
+static GbTabStack *
+gb_tab_grid_get_last_focused (GbTabGrid *grid)
+{
+  g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
+
+  return grid->priv->last_focused_stack;
+}
+
+static void
+gb_tab_grid_set_last_focused (GbTabGrid  *grid,
+                              GbTabStack *stack)
+{
+  GbTabGridPrivate *priv;
+
+  g_return_if_fail (GB_IS_TAB_GRID (grid));
+  g_return_if_fail (!stack || GB_TAB_STACK (stack));
+
+  priv = grid->priv;
+
+  if (priv->last_focused_stack)
+    {
+      g_object_remove_weak_pointer (G_OBJECT (priv->last_focused_stack),
+                                    (gpointer *)&priv->last_focused_stack);
+      priv->last_focused_stack = NULL;
+    }
+
+  if (stack)
+    {
+      priv->last_focused_stack = stack;
+      g_object_add_weak_pointer (G_OBJECT (stack),
+                                 (gpointer *)&priv->last_focused_stack);
+    }
+}
 
 GtkWidget *
 gb_tab_grid_new (void)
@@ -387,6 +424,109 @@ gb_tab_grid_focus_previous_view (GbTabGrid *self,
   EXIT;
 }
 
+static void
+on_next_tab (GSimpleAction *action,
+             GVariant      *parameters,
+             gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+  if (last_focused_stack)
+    if (!gb_tab_stack_focus_next (last_focused_stack))
+      gb_tab_stack_focus_first  (last_focused_stack);
+
+  EXIT;
+}
+
+static void
+on_previous_tab (GSimpleAction *action,
+                 GVariant      *parameters,
+                 gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+  if (last_focused_stack)
+    if (!gb_tab_stack_focus_previous (last_focused_stack))
+      gb_tab_stack_focus_last (last_focused_stack);
+
+  EXIT;
+}
+
+static void
+gb_tab_grid_on_set_focus (GbTabGrid *grid,
+                          GtkWidget *widget,
+                          GtkWindow *window)
+{
+  g_return_if_fail (GB_IS_TAB_GRID (grid));
+  g_return_if_fail (GTK_IS_WINDOW (window));
+
+  if (widget)
+    {
+      while (widget && !GB_IS_TAB_STACK (widget))
+        widget = gtk_widget_get_parent (widget);
+
+      if (GB_IS_TAB_STACK (widget))
+        gb_tab_grid_set_last_focused (grid, GB_TAB_STACK (widget));
+    }
+}
+
+static void
+gb_tab_grid_realize (GtkWidget *widget)
+{
+  GtkWidget *toplevel;
+  GbTabGrid *grid = (GbTabGrid *)widget;
+
+  g_return_if_fail (GB_IS_TAB_GRID (grid));
+
+  GTK_WIDGET_CLASS (gb_tab_grid_parent_class)->realize (widget);
+
+  toplevel = gtk_widget_get_toplevel (widget);
+
+  if (GTK_IS_WINDOW (toplevel))
+    {
+      /*
+       * WORKAROUND:
+       *
+       * We need to register our actions with the toplevel or they wont be
+       * taken into account when activating accelerators. See bugzilla bug
+       * 740682 for a patch to Gtk+.
+       */
+      gtk_widget_insert_action_group (toplevel, "tabs",
+                                      G_ACTION_GROUP (grid->priv->actions));
+
+      /*
+       * Track focus so we know where we are moving to/from in the stack.
+       */
+      g_signal_connect_object (toplevel,
+                               "set-focus",
+                               G_CALLBACK (gb_tab_grid_on_set_focus),
+                               widget,
+                               G_CONNECT_SWAPPED);
+    }
+}
+
+static void
+gb_tab_grid_finalize (GObject *object)
+{
+  GbTabGridPrivate *priv = GB_TAB_GRID (object)->priv;
+
+  g_clear_object (&priv->actions);
+
+  G_OBJECT_CLASS (gb_tab_grid_parent_class)->finalize (object);
+}
+
 /**
  * gb_tab_grid_class_init:
  * @klass: (in): A #GbTabGridClass.
@@ -396,7 +536,13 @@ gb_tab_grid_focus_previous_view (GbTabGrid *self,
 static void
 gb_tab_grid_class_init (GbTabGridClass *klass)
 {
+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
   GtkContainerClass *container_class = GTK_CONTAINER_CLASS (klass);
+
+  object_class->finalize = gb_tab_grid_finalize;
+
+  widget_class->realize = gb_tab_grid_realize;
 
   container_class->add = gb_tab_grid_add;
 }
@@ -410,10 +556,18 @@ gb_tab_grid_class_init (GbTabGridClass *klass)
 static void
 gb_tab_grid_init (GbTabGrid *self)
 {
+  static const GActionEntry entries[] = {
+    { "next", on_next_tab },
+    { "previous", on_previous_tab },
+  };
   GtkWidget *paned;
   GtkWidget *stack;
 
   self->priv = gb_tab_grid_get_instance_private (self);
+
+  self->priv->actions = g_simple_action_group_new ();
+  g_action_map_add_action_entries (G_ACTION_MAP (self->priv->actions),
+                                   entries, G_N_ELEMENTS (entries), self);
 
   self->priv->top_hpaned =
     g_object_new (GTK_TYPE_PANED,

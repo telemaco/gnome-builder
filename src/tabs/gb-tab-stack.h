@@ -58,6 +58,7 @@ void       gb_tab_stack_remove_tab     (GbTabStack *stack,
                                         GbTab      *tab);
 guint      gb_tab_stack_get_n_tabs     (GbTabStack *stack);
 gboolean   gb_tab_stack_focus_first    (GbTabStack *stack);
+gboolean   gb_tab_stack_focus_last     (GbTabStack *stack);
 gboolean   gb_tab_stack_focus_next     (GbTabStack *stack);
 gboolean   gb_tab_stack_focus_previous (GbTabStack *stack);
 gboolean   gb_tab_stack_focus_tab      (GbTabStack *stack,
