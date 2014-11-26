@@ -117,25 +117,6 @@ gb_tab_stack_get_tab_iter (GbTabStack  *stack,
   return FALSE;
 }
 
-void
-gb_tab_stack_remove_tab (GbTabStack *stack,
-                         GbTab      *tab)
-{
-  GtkTreeIter iter;
-
-  g_return_if_fail (GB_IS_TAB_STACK (stack));
-  g_return_if_fail (GB_IS_TAB (tab));
-
-  if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
-    {
-      gtk_container_remove (GTK_CONTAINER (stack->priv->controls),
-                            gb_tab_get_controls (tab));
-      gtk_container_remove (GTK_CONTAINER (stack->priv->stack),
-                            GTK_WIDGET (tab));
-      gtk_list_store_remove (stack->priv->store, &iter);
-    }
-}
-
 static gboolean
 gb_tab_stack_focus_iter (GbTabStack  *stack,
                          GtkTreeIter *iter)
@@ -160,6 +141,38 @@ gb_tab_stack_focus_iter (GbTabStack  *stack,
   g_clear_object (&tab);
 
   return ret;
+}
+
+void
+gb_tab_stack_remove_tab (GbTabStack *stack,
+                         GbTab      *tab)
+{
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  model = GTK_TREE_MODEL (stack->priv->store);
+
+  if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
+    {
+      gtk_container_remove (GTK_CONTAINER (stack->priv->controls),
+                            gb_tab_get_controls (tab));
+      gtk_container_remove (GTK_CONTAINER (stack->priv->stack),
+                            GTK_WIDGET (tab));
+      if (!gtk_list_store_remove (stack->priv->store, &iter))
+        {
+          guint count;
+
+          count = gtk_tree_model_iter_n_children (model, NULL);
+
+          if (gtk_tree_model_iter_nth_child (model, &iter, NULL, count-1))
+            gb_tab_stack_focus_iter (stack, &iter);
+        }
+      else
+        gb_tab_stack_focus_iter (stack, &iter);
+    }
 }
 
 gboolean
