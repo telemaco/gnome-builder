@@ -5,7 +5,8 @@ nobase_icon_DATA = \
 	hicolor/256x256/apps/builder.png \
 	hicolor/512x512/apps/builder.png \
 	hicolor/16x16/apps/builder.png \
-	hicolor/16x16/apps/builder-drag-tab.png \
+	hicolor/16x16/apps/builder-move-tab-left.png \
+	hicolor/16x16/apps/builder-move-tab-right.png \
 	hicolor/16x16/apps/builder-split-tab.png \
 	hicolor/32x32/apps/builder.png \
 	hicolor/48x48/apps/builder.png \

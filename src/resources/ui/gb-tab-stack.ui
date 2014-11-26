@@ -11,13 +11,43 @@
           <class name="linked"/>
         </style>
         <child>
+          <object class="GtkButton" id="move_left">
+            <property name="visible">true</property>
+            <property name="action_name">tabs.move-left</property>
+            <property name="tooltip_text">Move tab to the left</property>
+            <style>
+              <class name="image-button"/>
+              <class name="tab-header-first"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">true</property>
+                <property name="icon_name">builder-move-tab-left</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="move_right">
+            <property name="visible">true</property>
+            <property name="action_name">tabs.move-right</property>
+            <property name="tooltip_text">Move tab to the right</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+            <child>
+              <object class="GtkImage">
+                <property name="visible">true</property>
+                <property name="icon_name">builder-move-tab-right</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
           <object class="GtkComboBox" id="combo">
             <property name="visible">true</property>
             <property name="hexpand">true</property>
             <property name="model">store</property>
-            <style>
-              <class name="tab-header-first"/>
-            </style>
           </object>
         </child>
         <child>
@@ -26,24 +56,10 @@
           </object>
         </child>
         <child>
-          <object class="GtkButton" id="move_right">
-            <property name="visible">true</property>
-            <property name="action_name">tabs.move-right</property>
-            <style>
-              <class name="image-button"/>
-            </style>
-            <child>
-              <object class="GtkImage">
-                <property name="visible">true</property>
-                <property name="icon_name">builder-drag-tab</property>
-              </object>
-            </child>
-          </object>
-        </child>
-        <child>
           <object class="GtkButton" id="close">
             <property name="visible">true</property>
             <property name="sensitive">false</property>
+            <property name="tooltip_text">Close tab</property>
             <style>
               <class name="image-button"/>
               <class name="tab-header-last"/>

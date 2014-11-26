@@ -161,14 +161,16 @@ gb_tab_stack_remove_tab (GbTabStack *stack,
                             gb_tab_get_controls (tab));
       gtk_container_remove (GTK_CONTAINER (stack->priv->stack),
                             GTK_WIDGET (tab));
+
       if (!gtk_list_store_remove (stack->priv->store, &iter))
         {
           guint count;
 
-          count = gtk_tree_model_iter_n_children (model, NULL);
-
-          if (gtk_tree_model_iter_nth_child (model, &iter, NULL, count-1))
-            gb_tab_stack_focus_iter (stack, &iter);
+          if ((count = gtk_tree_model_iter_n_children (model, NULL)))
+            {
+              if (gtk_tree_model_iter_nth_child (model, &iter, NULL, count-1))
+                gb_tab_stack_focus_iter (stack, &iter);
+            }
         }
       else
         gb_tab_stack_focus_iter (stack, &iter);

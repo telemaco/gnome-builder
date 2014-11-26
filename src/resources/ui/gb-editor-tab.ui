@@ -23,7 +23,9 @@
         <child>
           <object class="GtkButton" id="split_button">
             <property name="visible">True</property>
+            <property name="tooltip_text">Split tab vertically</property>
             <style>
+              <class name="image-button"/>
               <class name="tab-control-last"/>
             </style>
             <child>
