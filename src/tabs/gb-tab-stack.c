@@ -520,6 +520,23 @@ gb_tab_stack_do_move_right (GbTabStack *stack,
 }
 
 static void
+gb_tab_stack_do_close_tab (GbTabStack *stack,
+                           GdkEvent   *event,
+                           GtkButton  *button)
+{
+  GbTabGrid *grid;
+  GbTab *tab;
+
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+
+  grid = get_grid (stack);
+  tab = gb_tab_stack_get_active (stack);
+
+  if (grid && tab)
+    gb_tab_stack_remove_tab (stack, tab);
+}
+
+static void
 gb_tab_stack_class_init (GbTabStackClass *klass)
 {
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
@@ -582,6 +599,12 @@ gb_tab_stack_init (GbTabStack *stack)
   g_signal_connect_object (stack->priv->move_right,
                            "clicked",
                            G_CALLBACK (gb_tab_stack_do_move_right),
+                           stack,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (stack->priv->close,
+                           "clicked",
+                           G_CALLBACK (gb_tab_stack_do_close_tab),
                            stack,
                            G_CONNECT_SWAPPED);
 
