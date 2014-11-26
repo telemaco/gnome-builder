@@ -378,6 +378,7 @@ gb_tab_grid_move_tab_right (GbTabGrid *self,
   GbTabStack *stack;
   GList *iter;
   GList *stacks;
+  GList *children;
 
   ENTRY;
 
@@ -390,6 +391,21 @@ gb_tab_grid_move_tab_right (GbTabGrid *self,
     {
       if (gb_tab_stack_contains_tab (iter->data, tab))
         {
+          /* if we are the last stack and this is the last item,
+           * we can short circuit and do nothing.
+           */
+          if (!iter->next)
+            {
+              guint length;
+
+              children = gb_tab_stack_get_tabs (iter->data);
+              length = g_list_length (children);
+              g_list_free (children);
+
+              if (length == 1)
+                break;
+            }
+
           g_object_ref (tab);
           gb_tab_stack_remove_tab (iter->data, tab);
           if (!iter->next)
