@@ -150,8 +150,8 @@ gb_tab_stack_focus_tab (GbTabStack *stack,
 {
   GtkTreeIter iter;
 
-  g_return_if_fail (GB_IS_TAB_STACK (stack));
-  g_return_if_fail (GB_IS_TAB (tab));
+  g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
+  g_return_val_if_fail (GB_IS_TAB (tab), FALSE);
 
   if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
     {

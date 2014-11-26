@@ -170,17 +170,16 @@ GbTab *
 gb_tab_grid_get_active (GbTabGrid *grid)
 {
   GbTabStack *last_focused_stack;
-  GtkWidget *ret = NULL;
+  GbTab *ret = NULL;
 
   g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
 
   last_focused_stack = gb_tab_grid_get_last_focused (grid);
 
   if (last_focused_stack)
-    if ((ret = gb_tab_stack_get_active (last_focused_stack)))
-      return GB_TAB (ret);
+    ret = gb_tab_stack_get_active (last_focused_stack);
 
-  return NULL;
+  return ret;
 }
 
 static void
@@ -644,12 +643,12 @@ on_move_right (GSimpleAction *action,
 
   if (GB_IS_TAB_STACK (last_focused_stack))
     {
-      GtkWidget *active;
+      GbTab *active;
 
       active = gb_tab_stack_get_active (last_focused_stack);
 
-      if (GB_IS_TAB (active))
-        gb_tab_grid_move_tab_right (self, GB_TAB (active));
+      if (active)
+        gb_tab_grid_move_tab_right (self, active);
     }
 
   EXIT;
@@ -671,12 +670,12 @@ on_move_left (GSimpleAction *action,
 
   if (GB_IS_TAB_STACK (last_focused_stack))
     {
-      GtkWidget *active;
+      GbTab *active;
 
       active = gb_tab_stack_get_active (last_focused_stack);
 
-      if (GB_IS_TAB (active))
-        gb_tab_grid_move_tab_left (self, GB_TAB (active));
+      if (active)
+        gb_tab_grid_move_tab_left (self, active);
     }
 
   EXIT;
