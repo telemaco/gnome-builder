@@ -20,6 +20,7 @@
 
 #include <glib/gi18n.h>
 
+#include "gb-tab-grid.h"
 #include "gb-log.h"
 #include "gb-tab-stack.h"
 
@@ -28,21 +29,20 @@ struct _GbTabStackPrivate
   GtkButton    *close;
   GtkComboBox  *combo;
   GtkStack     *controls;
+  GtkButton    *move_left;
+  GtkButton    *move_right;
   GtkStack     *stack;
   GtkListStore *store;
 };
 
-enum
-{
-  PROP_0,
-  LAST_PROP
-};
-
 G_DEFINE_TYPE_WITH_PRIVATE (GbTabStack, gb_tab_stack, GTK_TYPE_BOX)
 
-#if 0
-static GParamSpec *gParamSpecs [LAST_PROP];
-#endif
+enum {
+  CHANGED,
+  LAST_SIGNAL
+};
+
+static guint gSignals [LAST_SIGNAL];
 
 GtkWidget *
 gb_tab_stack_new (void)
@@ -95,9 +95,10 @@ gb_tab_stack_get_tab_iter (GbTabStack  *stack,
   g_return_val_if_fail (GB_IS_TAB_STACK (stack), FALSE);
   g_return_val_if_fail (iter, FALSE);
 
-  gtk_container_child_get (GTK_CONTAINER (stack->priv->stack), GTK_WIDGET (tab),
-                           "position", &position,
-                           NULL);
+  if (gtk_widget_get_parent (GTK_WIDGET (tab)) == GTK_WIDGET (stack->priv->stack))
+    gtk_container_child_get (GTK_CONTAINER (stack->priv->stack), GTK_WIDGET (tab),
+                             "position", &position,
+                             NULL);
 
   if (position != -1)
     {
@@ -193,6 +194,8 @@ gb_tab_stack_remove_tab (GbTabStack *stack,
       else
         gb_tab_stack_focus_iter (stack, &iter);
     }
+
+  g_signal_emit (stack, gSignals [CHANGED], 0);
 }
 
 gboolean
@@ -312,7 +315,6 @@ gb_tab_stack_combobox_changed (GbTabStack  *stack,
   GbTab *tab = NULL;
 
   g_return_if_fail (GB_IS_TAB_STACK (stack));
-  g_print ("changed\n");
 
   model = gtk_combo_box_get_model (combobox);
 
@@ -329,8 +331,6 @@ gb_tab_stack_combobox_changed (GbTabStack  *stack,
 
           if ((controls = gb_tab_get_controls (tab)))
             gtk_stack_set_visible_child (stack->priv->controls, controls);
-
-          g_print ("Controls: %p\n", controls);
         }
       else
         {
@@ -351,12 +351,22 @@ gb_tab_stack_queue_draw (gpointer data)
   return G_SOURCE_REMOVE;
 }
 
-GtkWidget *
+GbTab *
 gb_tab_stack_get_active (GbTabStack *stack)
 {
   g_return_val_if_fail (GB_IS_TAB_STACK (stack), NULL);
 
-  return gtk_stack_get_visible_child (stack->priv->stack);
+  return GB_TAB (gtk_stack_get_visible_child (stack->priv->stack));
+}
+
+static void
+gb_tab_stack_tab_closed (GbTabStack *stack,
+                         GbTab      *tab)
+{
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  gb_tab_stack_remove_tab (stack, tab);
 }
 
 static void
@@ -380,10 +390,17 @@ gb_tab_stack_add_tab (GbTabStack *stack,
 
   /* TODO: need to disconnect on (re)move */
   g_signal_connect_object (tab,
+                           "close",
+                           G_CALLBACK (gb_tab_stack_tab_closed),
+                           stack,
+                           G_CONNECT_SWAPPED);
+  g_signal_connect_object (tab,
                            "notify::title",
                            G_CALLBACK (gb_tab_stack_queue_draw),
                            stack,
                            G_CONNECT_SWAPPED);
+
+  g_signal_emit (stack, gSignals [CHANGED], 0);
 }
 
 static void
@@ -444,67 +461,95 @@ gb_tab_stack_grab_focus (GtkWidget *widget)
 }
 
 static void
-gb_tab_stack_finalize (GObject *object)
+gb_tab_stack_real_changed (GbTabStack *stack)
 {
-  G_OBJECT_CLASS (gb_tab_stack_parent_class)->finalize (object);
+  gboolean sensitive;
+
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+
+  sensitive = !!gtk_stack_get_visible_child (stack->priv->stack);
+  gtk_widget_set_sensitive (GTK_WIDGET (stack->priv->move_left), sensitive);
+  gtk_widget_set_sensitive (GTK_WIDGET (stack->priv->move_right), sensitive);
+}
+
+static GbTabGrid *
+get_grid (GbTabStack *stack)
+{
+  GtkWidget *widget;
+
+  widget = GTK_WIDGET (stack);
+
+  while (widget && !GB_IS_TAB_GRID (widget))
+    widget = gtk_widget_get_parent (widget);
+
+  return (GbTabGrid *)widget;
 }
 
 static void
-gb_tab_stack_get_property (GObject    *object,
-                           guint       prop_id,
-                           GValue     *value,
-                           GParamSpec *pspec)
+gb_tab_stack_do_move_left (GbTabStack *stack,
+                           GdkEvent   *event,
+                           GtkButton  *button)
 {
-#if 0
-  GbTabStack *stack = GB_TAB_STACK (object);
-#endif
+  GbTabGrid *grid;
+  GbTab *tab;
 
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+
+  grid = get_grid (stack);
+  tab = gb_tab_stack_get_active (stack);
+
+  if (grid && tab)
+    gb_tab_grid_move_tab_left (grid, tab);
 }
 
 static void
-gb_tab_stack_set_property (GObject      *object,
-                           guint         prop_id,
-                           const GValue *value,
-                           GParamSpec   *pspec)
+gb_tab_stack_do_move_right (GbTabStack *stack,
+                            GdkEvent   *event,
+                            GtkButton  *button)
 {
-#if 0
-  GbTabStack *stack = GB_TAB_STACK (object);
-#endif
+  GbTabGrid *grid;
+  GbTab *tab;
 
-  switch (prop_id)
-    {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-    }
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+
+  grid = get_grid (stack);
+  tab = gb_tab_stack_get_active (stack);
+
+  if (grid && tab)
+    gb_tab_grid_move_tab_right (grid, tab);
 }
 
 static void
 gb_tab_stack_class_init (GbTabStackClass *klass)
 {
-  GObjectClass *object_class = G_OBJECT_CLASS (klass);
   GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (klass);
   GtkContainerClass *container_class = GTK_CONTAINER_CLASS (klass);
-
-  object_class->finalize = gb_tab_stack_finalize;
-  object_class->get_property = gb_tab_stack_get_property;
-  object_class->set_property = gb_tab_stack_set_property;
 
   container_class->add = gb_tab_stack_add;
 
   widget_class->grab_focus = gb_tab_stack_grab_focus;
+
+  klass->changed = gb_tab_stack_real_changed;
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-tab-stack.ui");
   gtk_widget_class_bind_template_child_internal_private (widget_class, GbTabStack, controls);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, close);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, combo);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, move_left);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, move_right);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, stack);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, store);
+
+  gSignals [CHANGED] = g_signal_new ("changed",
+                                     GB_TYPE_TAB_STACK,
+                                     G_SIGNAL_RUN_FIRST,
+                                     G_STRUCT_OFFSET (GbTabStackClass, changed),
+                                     NULL,
+                                     NULL,
+                                     g_cclosure_marshal_generic,
+                                     G_TYPE_NONE,
+                                     0);
 
   g_type_ensure (GB_TYPE_TAB);
 }
@@ -525,6 +570,18 @@ gb_tab_stack_init (GbTabStack *stack)
   g_signal_connect_object (stack->priv->combo,
                            "changed",
                            G_CALLBACK (gb_tab_stack_combobox_changed),
+                           stack,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (stack->priv->move_left,
+                           "clicked",
+                           G_CALLBACK (gb_tab_stack_do_move_left),
+                           stack,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (stack->priv->move_right,
+                           "clicked",
+                           G_CALLBACK (gb_tab_stack_do_move_right),
                            stack,
                            G_CONNECT_SWAPPED);
 

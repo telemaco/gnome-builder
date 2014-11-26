@@ -55,6 +55,8 @@ GType      gb_tab_grid_get_type           (void) G_GNUC_CONST;
 GbTab     *gb_tab_grid_get_active         (GbTabGrid *grid);
 void       gb_tab_grid_focus_tab          (GbTabGrid *grid,
                                            GbTab     *tab);
+void       gb_tab_grid_move_tab_left      (GbTabGrid *grid,
+                                           GbTab     *tab);
 void       gb_tab_grid_move_tab_right     (GbTabGrid *grid,
                                            GbTab     *tab);
 void       gb_tab_grid_focus_next_tab     (GbTabGrid *grid,

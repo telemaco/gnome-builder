@@ -39,7 +39,7 @@ typedef struct _GbTabStackPrivate GbTabStackPrivate;
 
 struct _GbTabStack
 {
-   GtkVBox parent;
+   GtkBox parent;
 
    /*< private >*/
    GbTabStackPrivate *priv;
@@ -47,11 +47,13 @@ struct _GbTabStack
 
 struct _GbTabStackClass
 {
-   GtkVBoxClass parent_class;
+   GtkBoxClass parent_class;
+
+   void (*changed) (GbTabStack *stack);
 };
 
 GType      gb_tab_stack_get_type       (void) G_GNUC_CONST;
-GtkWidget *gb_tab_stack_get_active     (GbTabStack *stack);
+GbTab     *gb_tab_stack_get_active     (GbTabStack *stack);
 gboolean   gb_tab_stack_contains_tab   (GbTabStack *stack,
                                         GbTab      *tab);
 void       gb_tab_stack_remove_tab     (GbTabStack *stack,

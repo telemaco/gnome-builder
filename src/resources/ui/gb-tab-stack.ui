@@ -13,7 +13,7 @@
         <child>
           <object class="GtkButton" id="move_left">
             <property name="visible">true</property>
-            <property name="action_name">tabs.move-left</property>
+            <property name="sensitive">false</property>
             <property name="tooltip_text">Move tab to the left</property>
             <style>
               <class name="image-button"/>
@@ -30,7 +30,7 @@
         <child>
           <object class="GtkButton" id="move_right">
             <property name="visible">true</property>
-            <property name="action_name">tabs.move-right</property>
+            <property name="sensitive">false</property>
             <property name="tooltip_text">Move tab to the right</property>
             <style>
               <class name="image-button"/>
