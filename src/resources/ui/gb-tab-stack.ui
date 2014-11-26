@@ -78,6 +78,7 @@
       <object class="GtkStack" id="stack">
         <property name="visible">true</property>
         <property name="expand">true</property>
+        <property name="transition-type">GTK_STACK_TRANSITION_TYPE_CROSSFADE</property>
       </object>
     </child>
   </template>
