@@ -40,18 +40,6 @@
           <object class="GbTabGrid" id="tab_grid">
             <property name="visible">True</property>
             <property name="hexpand">True</property>
-            <child>
-              <object class="GbEditorTab">
-                <property name="visible">True</property>
-                <property name="title">Foo.c</property>
-              </object>
-            </child>
-            <child>
-              <object class="GbEditorTab">
-                <property name="visible">True</property>
-                <property name="title">Foo2.c</property>
-              </object>
-            </child>
           </object>
         </child>
       </object>
