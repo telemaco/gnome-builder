@@ -38,14 +38,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (GbTabGrid, gb_tab_grid, GTK_TYPE_BIN)
 static GtkWidget *
 gb_tab_grid_get_first_stack (GbTabGrid*);
 
-static GbTabStack *
-gb_tab_grid_get_last_focused (GbTabGrid *grid)
-{
-  g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
-
-  return grid->priv->last_focused_stack;
-}
-
 static void
 gb_tab_grid_set_last_focused (GbTabGrid  *grid,
                               GbTabStack *stack)
@@ -163,6 +155,17 @@ gb_tab_grid_get_first_stack (GbTabGrid *self)
   RETURN (child);
 }
 
+static GbTabStack *
+gb_tab_grid_get_last_focused (GbTabGrid *grid)
+{
+  g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
+
+  if (!grid->priv->last_focused_stack)
+    return (GbTabStack *)gb_tab_grid_get_first_stack (grid);
+
+  return grid->priv->last_focused_stack;
+}
+
 static void
 gb_tab_grid_add (GtkContainer *container,
                  GtkWidget    *child)
@@ -278,6 +281,51 @@ gb_tab_grid_realign (GbTabGrid *self)
 }
 
 static GbTabStack *
+gb_tab_grid_prepend_stack (GbTabGrid *self)
+{
+  GbTabGridPrivate *priv;
+  GtkWidget *stack;
+  GtkWidget *paned;
+  GtkWidget *child2;
+
+  ENTRY;
+
+  g_return_val_if_fail (GB_IS_TAB_GRID (self), NULL);
+
+  priv = self->priv;
+
+  stack = g_object_new (GB_TYPE_TAB_STACK,
+                        "visible", TRUE,
+                        NULL);
+  g_signal_connect_swapped (stack, "changed",
+                            G_CALLBACK (gb_tab_grid_remove_empty),
+                            self);
+  child2 = gtk_paned_get_child2 (GTK_PANED (priv->top_hpaned));
+  g_object_ref (child2);
+  gtk_container_remove (GTK_CONTAINER (priv->top_hpaned), child2);
+  paned = g_object_new (GTK_TYPE_PANED,
+                        "orientation", GTK_ORIENTATION_HORIZONTAL,
+                        "visible", TRUE,
+                        NULL);
+  gtk_paned_add1 (GTK_PANED (paned), stack);
+  gtk_paned_add2 (GTK_PANED (paned), child2);
+  gtk_container_child_set (GTK_CONTAINER (paned), stack,
+                           "resize", TRUE,
+                           "shrink", FALSE,
+                           NULL);
+  gtk_container_child_set (GTK_CONTAINER (paned), child2,
+                           "resize", TRUE,
+                           "shrink", FALSE,
+                           NULL);
+  g_object_unref (child2);
+  gtk_paned_add2 (GTK_PANED (priv->top_hpaned), paned);
+
+  gb_tab_grid_realign (self);
+
+  RETURN (GB_TAB_STACK (stack));
+}
+
+static GbTabStack *
 gb_tab_grid_add_stack (GbTabGrid *self)
 {
   GbTabGridPrivate *priv;
@@ -348,10 +396,47 @@ gb_tab_grid_move_tab_right (GbTabGrid *self,
             stack = gb_tab_grid_add_stack (self);
           else
             stack = iter->next->data;
-#if 0
-          gb_tab_stack_add_tab (stack, tab);
-#endif
           gtk_container_add (GTK_CONTAINER (stack), GTK_WIDGET (tab));
+          gtk_widget_grab_focus (GTK_WIDGET (tab));
+          g_object_unref (tab);
+          break;
+        }
+    }
+
+  g_list_free (stacks);
+
+  gb_tab_grid_remove_empty (self);
+
+  EXIT;
+}
+
+void
+gb_tab_grid_move_tab_left (GbTabGrid *self,
+                           GbTab     *tab)
+{
+  GbTabStack *stack;
+  GList *iter;
+  GList *stacks;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  stacks = gb_tab_grid_get_stacks (self);
+
+  for (iter = stacks; iter; iter = iter->next)
+    {
+      if (gb_tab_stack_contains_tab (iter->data, tab))
+        {
+          g_object_ref (tab);
+          gb_tab_stack_remove_tab (iter->data, tab);
+          if (!iter->prev)
+            stack = gb_tab_grid_prepend_stack (self);
+          else
+            stack = iter->prev->data;
+          gtk_container_add (GTK_CONTAINER (stack), GTK_WIDGET (tab));
+          gtk_widget_grab_focus (GTK_WIDGET (tab));
           g_object_unref (tab);
           break;
         }
@@ -465,6 +550,124 @@ on_previous_tab (GSimpleAction *action,
 }
 
 static void
+on_focus_tab_left (GSimpleAction *action,
+                   GVariant      *parameters,
+                   gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+  GList *stacks;
+  GList *iter;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+  stacks = gb_tab_grid_get_stacks (self);
+
+  for (iter = stacks; iter; iter = iter->next)
+    {
+      if ((iter->data == (void *)last_focused_stack) &&
+          iter->prev && iter->prev->data)
+        {
+          gtk_widget_grab_focus (iter->prev->data);
+          break;
+        }
+    }
+
+  g_list_free (stacks);
+
+  EXIT;
+}
+
+static void
+on_focus_tab_right (GSimpleAction *action,
+                    GVariant      *parameters,
+                    gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+  GList *stacks;
+  GList *iter;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+  stacks = gb_tab_grid_get_stacks (self);
+
+  for (iter = stacks; iter; iter = iter->next)
+    {
+      if ((iter->data == (void *)last_focused_stack) &&
+          iter->next && iter->next->data)
+        {
+          gtk_widget_grab_focus (iter->next->data);
+          break;
+        }
+    }
+
+  g_list_free (stacks);
+
+  EXIT;
+}
+
+static void
+on_move_right (GSimpleAction *action,
+               GVariant      *parameters,
+               gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+
+  if (GB_IS_TAB_STACK (last_focused_stack))
+    {
+      GtkWidget *active;
+
+      active = gb_tab_stack_get_active (last_focused_stack);
+
+      if (GB_IS_TAB (active))
+        gb_tab_grid_move_tab_right (self, GB_TAB (active));
+    }
+
+  EXIT;
+}
+
+static void
+on_move_left (GSimpleAction *action,
+              GVariant      *parameters,
+              gpointer       user_data)
+{
+  GbTabGrid *self = user_data;
+  GbTabStack *last_focused_stack = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_TAB_GRID (self));
+
+  last_focused_stack = gb_tab_grid_get_last_focused (self);
+
+  if (GB_IS_TAB_STACK (last_focused_stack))
+    {
+      GtkWidget *active;
+
+      active = gb_tab_stack_get_active (last_focused_stack);
+
+      if (GB_IS_TAB (active))
+        gb_tab_grid_move_tab_left (self, GB_TAB (active));
+    }
+
+  EXIT;
+}
+
+static void
 gb_tab_grid_on_set_focus (GbTabGrid *grid,
                           GtkWidget *widget,
                           GtkWindow *window)
@@ -559,6 +762,10 @@ gb_tab_grid_init (GbTabGrid *self)
   static const GActionEntry entries[] = {
     { "next", on_next_tab },
     { "previous", on_previous_tab },
+    { "right", on_focus_tab_right },
+    { "left", on_focus_tab_left },
+    { "move-right", on_move_right },
+    { "move-left", on_move_left },
   };
   GtkWidget *paned;
   GtkWidget *stack;

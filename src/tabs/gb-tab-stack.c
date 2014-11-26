@@ -128,6 +128,8 @@ gb_tab_stack_remove_tab (GbTabStack *stack,
 
   if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
     {
+      gtk_container_remove (GTK_CONTAINER (stack->priv->controls),
+                            gb_tab_get_controls (tab));
       gtk_container_remove (GTK_CONTAINER (stack->priv->stack),
                             GTK_WIDGET (tab));
       gtk_list_store_remove (stack->priv->store, &iter);
@@ -151,6 +153,7 @@ gb_tab_stack_focus_iter (GbTabStack  *stack,
   if (GB_IS_TAB (tab))
     {
       gtk_combo_box_set_active_iter (stack->priv->combo, iter);
+      gtk_widget_grab_focus (GTK_WIDGET (tab));
       ret = TRUE;
     }
 
@@ -308,11 +311,19 @@ gb_tab_stack_combobox_changed (GbTabStack  *stack,
 static gboolean
 gb_tab_stack_queue_draw (gpointer data)
 {
-  g_return_val_if_fail (GTK_IS_WIDGET (data), NULL);
+  g_return_val_if_fail (GTK_IS_WIDGET (data), FALSE);
 
   gtk_widget_queue_draw (GTK_WIDGET (data));
 
   return G_SOURCE_REMOVE;
+}
+
+GtkWidget *
+gb_tab_stack_get_active (GbTabStack *stack)
+{
+  g_return_val_if_fail (GB_IS_TAB_STACK (stack), NULL);
+
+  return gtk_stack_get_visible_child (stack->priv->stack);
 }
 
 static void
@@ -386,6 +397,20 @@ gb_tab_stack_combobox_text_func (GtkCellLayout   *cell_layout,
 }
 
 static void
+gb_tab_stack_grab_focus (GtkWidget *widget)
+{
+  GbTabStack *stack = (GbTabStack *)widget;
+  GtkWidget *child;
+
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+
+  child = gtk_stack_get_visible_child (stack->priv->stack);
+
+  if (child)
+    gtk_widget_grab_focus (child);
+}
+
+static void
 gb_tab_stack_finalize (GObject *object)
 {
   G_OBJECT_CLASS (gb_tab_stack_parent_class)->finalize (object);
@@ -437,6 +462,8 @@ gb_tab_stack_class_init (GbTabStackClass *klass)
   object_class->set_property = gb_tab_stack_set_property;
 
   container_class->add = gb_tab_stack_add;
+
+  widget_class->grab_focus = gb_tab_stack_grab_focus;
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-tab-stack.ui");

@@ -28,6 +28,7 @@
         <child>
           <object class="GtkButton" id="move_right">
             <property name="visible">true</property>
+            <property name="action_name">tabs.move-right</property>
             <style>
               <class name="image-button"/>
             </style>
