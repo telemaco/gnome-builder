@@ -611,21 +611,13 @@ static void
 gb_editor_commands_open (GbEditorWorkspace *workspace,
                          GbEditorTab       *tab)
 {
-  GbEditorWorkspacePrivate *priv;
   GtkFileChooserDialog *dialog;
   GtkWidget *toplevel;
   GtkWidget *suggested;
   GtkResponseType response;
-  GbNotebook *notebook;
-  GbTab *active_tab;
 
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
   g_return_if_fail (!tab || GB_IS_EDITOR_TAB (tab));
-
-  priv = workspace->priv;
-
-  active_tab = gb_multi_notebook_get_active_tab (priv->multi_notebook);
-  notebook = gb_multi_notebook_get_active_notebook (priv->multi_notebook);
 
   toplevel = gtk_widget_get_toplevel (GTK_WIDGET (workspace));
 
@@ -656,6 +648,7 @@ gb_editor_commands_open (GbEditorWorkspace *workspace,
     {
       GSList *files;
       GSList *iter;
+      GbEditorTab *new_tab;
 
       files = gtk_file_chooser_get_files (GTK_FILE_CHOOSER (dialog));
 
@@ -663,15 +656,13 @@ gb_editor_commands_open (GbEditorWorkspace *workspace,
         {
           GFile *file = iter->data;
 
-          if (!tab || !gb_editor_tab_get_is_default (GB_EDITOR_TAB (active_tab)))
-            {
-              tab = GB_EDITOR_TAB (gb_editor_tab_new ());
-              gb_notebook_add_tab (notebook, GB_TAB (tab));
-              gtk_widget_show (GTK_WIDGET (tab));
-            }
+          new_tab = g_object_new (GB_TYPE_EDITOR_TAB,
+                                  "visible", TRUE,
+                                  NULL);
+          gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                             GTK_WIDGET (new_tab));
 
-          gb_editor_tab_open_file (tab, file);
-          gb_notebook_raise_tab (notebook, GB_TAB (tab));
+          gb_editor_tab_open_file (new_tab, file);
 
           g_clear_object (&file);
         }
@@ -686,27 +677,14 @@ static void
 gb_editor_commands_new_tab (GbEditorWorkspace *workspace,
                             GbEditorTab       *tab)
 {
-  GbEditorWorkspacePrivate *priv;
-  GbNotebook *notebook;
-  gint page;
-
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
-
-  priv = workspace->priv;
-
-  notebook = gb_multi_notebook_get_active_notebook (priv->multi_notebook);
 
   tab = g_object_new (GB_TYPE_EDITOR_TAB,
                       "visible", TRUE,
                       NULL);
-  gb_notebook_add_tab (notebook, GB_TAB (tab));
-
-  gtk_container_child_get (GTK_CONTAINER (notebook), GTK_WIDGET (tab),
-                           "position", &page,
-                           NULL);
-  gtk_notebook_set_current_page (GTK_NOTEBOOK (notebook), page);
-
-  gtk_widget_grab_focus (GTK_WIDGET (tab));
+  gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                     GTK_WIDGET (tab));
+  gb_tab_grid_focus_tab (workspace->priv->tab_grid, GB_TAB (tab));
 }
 
 static gboolean
@@ -891,7 +869,7 @@ gb_editor_commands_highlight_mode (GSimpleAction     *action,
 
   g_assert (GB_IS_EDITOR_WORKSPACE (workspace));
 
-  tab = gb_multi_notebook_get_active_tab (workspace->priv->multi_notebook);
+  tab = gb_tab_grid_get_active (workspace->priv->tab_grid);
 
   if (GB_IS_TAB (tab))
     {
@@ -939,7 +917,7 @@ gb_editor_commands_activate (GSimpleAction *action,
   if (!command)
     return;
 
-  tab = gb_multi_notebook_get_active_tab (workspace->priv->multi_notebook);
+  tab = gb_tab_grid_get_active (workspace->priv->tab_grid);
   if (!tab && command->requires_tab)
     return;
 

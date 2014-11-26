@@ -166,41 +166,40 @@ gb_tab_grid_get_last_focused (GbTabGrid *grid)
   return grid->priv->last_focused_stack;
 }
 
+GbTab *
+gb_tab_grid_get_active (GbTabGrid *grid)
+{
+  GbTabStack *last_focused_stack;
+  GtkWidget *ret = NULL;
+
+  g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
+
+  last_focused_stack = gb_tab_grid_get_last_focused (grid);
+
+  if (last_focused_stack)
+    if ((ret = gb_tab_stack_get_active (last_focused_stack)))
+      return GB_TAB (ret);
+
+  return NULL;
+}
+
 static void
 gb_tab_grid_add (GtkContainer *container,
                  GtkWidget    *child)
 {
-  GbTabGridPrivate *priv;
   GbTabGrid *self = (GbTabGrid *) container;
-  GtkWidget *stack = NULL;
-  GtkWidget *toplevel;
+  GbTabStack *stack = NULL;
 
   g_return_if_fail (GB_IS_TAB_GRID (self));
   g_return_if_fail (GTK_IS_WIDGET (child));
 
-  priv = self->priv;
-
   if (GB_IS_TAB (child))
     {
-      /*
-       * Try to find the currently focused view.
-       */
-      toplevel = gtk_widget_get_toplevel (GTK_WIDGET (self));
-      if (toplevel && GTK_IS_WINDOW (toplevel))
-        {
-          if ((stack = gtk_window_get_focus (GTK_WINDOW (toplevel))))
-            while (stack && !GB_IS_TAB_STACK (stack))
-              stack = gtk_widget_get_parent (stack);
-
-        }
-
-      if (!stack)
-        stack = gb_tab_grid_get_first_stack (self);
-
+      stack = gb_tab_grid_get_last_focused (self);
       gtk_container_add (GTK_CONTAINER (stack), child);
     }
   else
-    gtk_paned_add1 (GTK_PANED (priv->top_hpaned), child);
+    gtk_paned_add1 (GTK_PANED (self->priv->top_hpaned), child);
 }
 
 static GList *
@@ -736,6 +735,41 @@ gb_tab_grid_realize (GtkWidget *widget)
     }
 }
 
+void
+gb_tab_grid_focus_tab (GbTabGrid *grid,
+                       GbTab     *tab)
+{
+  GList *stacks;
+  GList *iter;
+
+  g_return_if_fail (GB_IS_TAB_GRID (grid));
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  stacks = gb_tab_grid_get_stacks (grid);
+
+  for (iter = stacks; iter; iter = iter->next)
+    {
+      if (gb_tab_stack_contains_tab (iter->data, tab))
+        {
+          gb_tab_stack_focus_tab (iter->data, tab);
+          break;
+        }
+    }
+}
+
+static void
+gb_tab_grid_grab_focus (GtkWidget *widget)
+{
+  GbTabGrid *grid = (GbTabGrid *)widget;
+  GbTabStack *stack;
+
+  g_return_if_fail (GB_IS_TAB_GRID (grid));
+
+  stack = gb_tab_grid_get_last_focused (grid);
+
+  gtk_widget_grab_focus (GTK_WIDGET (stack));
+}
+
 static void
 gb_tab_grid_finalize (GObject *object)
 {
@@ -762,6 +796,7 @@ gb_tab_grid_class_init (GbTabGridClass *klass)
   object_class->finalize = gb_tab_grid_finalize;
 
   widget_class->realize = gb_tab_grid_realize;
+  widget_class->grab_focus = gb_tab_grid_grab_focus;
 
   container_class->add = gb_tab_grid_add;
 }

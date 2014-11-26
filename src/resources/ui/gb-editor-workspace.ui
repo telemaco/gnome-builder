@@ -36,7 +36,6 @@
             </child>
           </object>
         </child>
-<child><object class="GtkBox"><property name="visible">True</property>
         <child>
           <object class="GbTabGrid" id="tab_grid">
             <property name="visible">True</property>
@@ -55,15 +54,6 @@
             </child>
           </object>
         </child>
-        <child>
-          <object class="GbMultiNotebook" id="multi_notebook">
-            <property name="group-name">GB_EDITOR_WORKSPACE</property>
-            <property name="hexpand">True</property>
-            <property name="visible">false</property>
-            <property name="show-tabs">False</property>
-          </object>
-        </child>
-</object></child>
       </object>
     </child>
   </template>

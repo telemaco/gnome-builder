@@ -21,7 +21,6 @@
 #include "gb-editor-commands.h"
 #include "gb-editor-workspace.h"
 #include "gb-editor-workspace-private.h"
-#include "gb-multi-notebook.h"
 #include "gb-tab-grid.h"
 #include "gb-tree.h"
 
@@ -37,27 +36,18 @@ gb_editor_workspace_open (GbEditorWorkspace *workspace,
                           GFile             *file)
 {
   GbEditorTab *tab;
-  GbNotebook *notebook;
-  gint page;
 
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
   g_return_if_fail (G_IS_FILE (file));
 
-  notebook = gb_multi_notebook_get_active_notebook (workspace->priv->multi_notebook);
-
   tab = g_object_new (GB_TYPE_EDITOR_TAB,
                       "visible", TRUE,
                       NULL);
-  gb_notebook_add_tab (notebook, GB_TAB (tab));
-
-  gtk_container_child_get (GTK_CONTAINER (notebook), GTK_WIDGET (tab),
-                           "position", &page,
-                           NULL);
-  gtk_notebook_set_current_page (GTK_NOTEBOOK (notebook), page);
+  gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                     GTK_WIDGET (tab));
+  gb_tab_grid_focus_tab (workspace->priv->tab_grid, GB_TAB (tab));
 
   gb_editor_tab_open_file (tab, file);
-
-  gtk_widget_grab_focus (GTK_WIDGET (tab));
 }
 
 static GActionGroup *
@@ -72,14 +62,10 @@ static void
 gb_editor_workspace_grab_focus (GtkWidget *widget)
 {
   GbEditorWorkspace *workspace = GB_EDITOR_WORKSPACE (widget);
-  GbTab *tab;
 
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
 
-  tab = gb_multi_notebook_get_active_tab (workspace->priv->multi_notebook);
-
-  if (tab)
-    gtk_widget_grab_focus (GTK_WIDGET (tab));
+  gtk_widget_grab_focus (GTK_WIDGET (workspace->priv->tab_grid));
 }
 
 static void
@@ -108,11 +94,10 @@ gb_editor_workspace_class_init (GbEditorWorkspaceClass *klass)
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-editor-workspace.ui");
-  gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, multi_notebook);
   gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, paned);
+  gtk_widget_class_bind_template_child_private (widget_class, GbEditorWorkspace, tab_grid);
 
   g_type_ensure (GB_TYPE_EDITOR_TAB);
-  g_type_ensure (GB_TYPE_MULTI_NOTEBOOK);
   g_type_ensure (GB_TYPE_TAB_GRID);
   g_type_ensure (GB_TYPE_TREE);
 }

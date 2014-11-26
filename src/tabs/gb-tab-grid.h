@@ -21,6 +21,8 @@
 
 #include <gtk/gtk.h>
 
+#include "gb-tab.h"
+
 G_BEGIN_DECLS
 
 #define GB_TYPE_TAB_GRID            (gb_tab_grid_get_type())
@@ -50,6 +52,9 @@ struct _GbTabGridClass
 
 GtkWidget *gb_tab_grid_new                (void);
 GType      gb_tab_grid_get_type           (void) G_GNUC_CONST;
+GbTab     *gb_tab_grid_get_active         (GbTabGrid *grid);
+void       gb_tab_grid_focus_tab          (GbTabGrid *grid,
+                                           GbTab     *tab);
 void       gb_tab_grid_move_tab_right     (GbTabGrid *grid,
                                            GbTab     *tab);
 void       gb_tab_grid_focus_next_tab     (GbTabGrid *grid,

@@ -143,6 +143,24 @@ gb_tab_stack_focus_iter (GbTabStack  *stack,
   return ret;
 }
 
+gboolean
+gb_tab_stack_focus_tab (GbTabStack *stack,
+                        GbTab      *tab)
+{
+  GtkTreeIter iter;
+
+  g_return_if_fail (GB_IS_TAB_STACK (stack));
+  g_return_if_fail (GB_IS_TAB (tab));
+
+  if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
+    {
+      gb_tab_stack_focus_iter (stack, &iter);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 void
 gb_tab_stack_remove_tab (GbTabStack *stack,
                          GbTab      *tab)
