@@ -25,23 +25,26 @@
 #include "gb-editor-document.h"
 #include "gb-log.h"
 #include "gb-source-code-assistant.h"
+#include "gca-diagnostics.h"
 #include "gca-service.h"
 #include "gca-structs.h"
 
 struct _GbSourceCodeAssistantPrivate
 {
-  GtkTextBuffer *buffer;
-  GcaService    *proxy;
-  GArray        *diagnostics;
+  GtkTextBuffer  *buffer;
+  GcaService     *proxy;
+  GcaDiagnostics *document_proxy;
+  GArray         *diagnostics;
+  gchar          *document_path;
 
-  gchar         *tmpfile_path;
-  int            tmpfile_fd;
+  gchar          *tmpfile_path;
+  int             tmpfile_fd;
 
-  gulong         changed_handler;
-  gulong         notify_language_handler;
+  gulong          changed_handler;
+  gulong          notify_language_handler;
 
-  guint          parse_timeout;
-  guint          active;
+  guint           parse_timeout;
+  guint           active;
 };
 
 enum {
@@ -193,17 +196,152 @@ gb_source_code_assistant_get_diagnostics (GbSourceCodeAssistant *assistant)
 }
 
 static void
-gb_source_code_assistant_parse_cb (GObject      *source_object,
-                                   GAsyncResult *result,
-                                   gpointer      user_data)
+gb_source_code_assistant_diag_cb (GObject      *source_object,
+                                  GAsyncResult *result,
+                                  gpointer      user_data)
 {
+  GbSourceCodeAssistantPrivate *priv;
   GbSourceCodeAssistant *assistant = user_data;
+  GcaDiagnostics *proxy = GCA_DIAGNOSTICS (source_object);
+  GError *error = NULL;
+  GVariant *diags = NULL;
 
   ENTRY;
 
   g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
 
+  priv = assistant->priv;
+
   gb_source_code_assistant_inc_active (assistant, -1);
+
+  if (!gca_diagnostics_call_diagnostics_finish (proxy, &diags, result, &error))
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+      GOTO (failure);
+    }
+
+  g_clear_pointer (&priv->diagnostics, g_array_unref);
+
+  priv->diagnostics = gca_diagnostics_from_variant (diags);
+
+  /* TODO: update buffer text tags */
+
+  g_signal_emit (assistant, gSignals [CHANGED], 0);
+
+failure:
+  g_object_unref (assistant);
+  g_clear_pointer (&diags, g_variant_unref);
+
+  EXIT;
+}
+
+static void
+gb_source_code_assistant_diag_proxy_cb (GObject      *source_object,
+                                        GAsyncResult *result,
+                                        gpointer      user_data)
+{
+  GbSourceCodeAssistantPrivate *priv;
+  GbSourceCodeAssistant *assistant = user_data;
+  GcaDiagnostics *proxy;
+  GError *error = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+
+  priv = assistant->priv;
+
+  gb_source_code_assistant_inc_active (assistant, -1);
+
+  if (!(proxy = gca_diagnostics_proxy_new_finish (result, &error)))
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+      GOTO (failure);
+    }
+
+  g_clear_object (&priv->document_proxy);
+  priv->document_proxy = proxy;
+
+  gb_source_code_assistant_inc_active (assistant, 1);
+  gca_diagnostics_call_diagnostics (proxy, NULL,
+                                    gb_source_code_assistant_diag_cb,
+                                    g_object_ref (assistant));
+
+failure:
+  g_object_unref (assistant);
+
+  EXIT;
+}
+
+static void
+gb_source_code_assistant_parse_cb (GObject      *source_object,
+                                   GAsyncResult *result,
+                                   gpointer      user_data)
+{
+  GbSourceCodeAssistantPrivate *priv;
+  GbSourceCodeAssistant *assistant = user_data;
+  GcaService *service = GCA_SERVICE (source_object);
+  GtkSourceLanguage *language;
+  const gchar *lang_id;
+  GError *error = NULL;
+  gchar *name = NULL;
+  gchar *document_path = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+
+  priv = assistant->priv;
+
+  gb_source_code_assistant_inc_active (assistant, -1);
+
+  if (!gca_service_call_parse_finish (service, &document_path, result, &error))
+    {
+      g_warning ("%s", error->message);
+      GOTO (failure);
+    }
+
+  language = gtk_source_buffer_get_language (GTK_SOURCE_BUFFER (priv->buffer));
+  if (!language)
+    GOTO (failure);
+
+  lang_id = gtk_source_language_get_id (language);
+  name = g_strdup_printf ("org.gnome.CodeAssist.v1.%s", lang_id);
+
+  if (priv->document_proxy)
+    {
+      const gchar *object_path;
+
+      object_path = g_dbus_proxy_get_object_path (G_DBUS_PROXY (priv->document_proxy));
+      if (g_strcmp0 (document_path, object_path) != 0)
+        g_clear_object (&priv->document_proxy);
+    }
+
+  if (!priv->document_proxy)
+    {
+      gb_source_code_assistant_inc_active (assistant, 1);
+      gca_diagnostics_proxy_new (gDBus,
+                                 G_DBUS_PROXY_FLAGS_NONE,
+                                 name,
+                                 document_path,
+                                 NULL,
+                                 gb_source_code_assistant_diag_proxy_cb,
+                                 g_object_ref (assistant));
+    }
+  else
+    {
+      gb_source_code_assistant_inc_active (assistant, 1);
+      gca_diagnostics_call_diagnostics (priv->document_proxy, NULL,
+                                        gb_source_code_assistant_diag_cb,
+                                        g_object_ref (assistant));
+    }
+
+failure:
+  g_clear_error (&error);
+  g_free (document_path);
+  g_free (name);
   g_object_unref (assistant);
 
   EXIT;
@@ -473,6 +611,9 @@ gb_source_code_assistant_finalize (GObject *object)
 
   close (priv->tmpfile_fd);
   priv->tmpfile_fd = -1;
+
+  g_clear_pointer (&priv->document_path, g_free);
+  g_clear_object (&priv->document_proxy);
 
   G_OBJECT_CLASS (gb_source_code_assistant_parent_class)->finalize (object);
 
