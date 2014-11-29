@@ -108,7 +108,7 @@ gb_source_code_assistant_renderer_changed (GbSourceCodeAssistantRenderer *render
 
   if (priv->diagnostics)
     {
-      for (i = 0; priv->diagnostics->len; i++)
+      for (i = 0; i < priv->diagnostics->len; i++)
         {
           GcaDiagnostic *diag;
           guint j;
