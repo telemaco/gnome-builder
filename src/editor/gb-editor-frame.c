@@ -504,6 +504,9 @@ gb_editor_frame_finalize (GObject *object)
 
   gb_editor_frame_disconnect (frame);
 
+  g_clear_object (&frame->priv->diff_renderer);
+  g_clear_object (&frame->priv->code_assistant_renderer);
+
   G_OBJECT_CLASS (gb_editor_frame_parent_class)->finalize (object);
 }
 
@@ -529,6 +532,7 @@ gb_editor_frame_constructed (GObject *object)
                                       "visible", TRUE,
                                       "xpad", 1,
                                       NULL);
+  priv->diff_renderer = g_object_ref (priv->diff_renderer);
   gtk_source_gutter_insert (gutter,
                             GTK_SOURCE_GUTTER_RENDERER (priv->diff_renderer),
                             0);
@@ -539,6 +543,7 @@ gb_editor_frame_constructed (GObject *object)
                   "size", 16,
                   "visible", TRUE,
                   NULL);
+  priv->code_assistant_renderer = g_object_ref (priv->code_assistant_renderer);
   gtk_source_gutter_insert (gutter,
                             GTK_SOURCE_GUTTER_RENDERER (priv->code_assistant_renderer),
                             -50);
