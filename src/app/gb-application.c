@@ -351,6 +351,7 @@ gb_application_activate (GApplication *application)
 
   {
     GbEditorDocument *document;
+    GtkSourceLanguage *language;
     GtkSourceFile *file;
     GFile *gfile;
     GtkWindow *window;
@@ -361,7 +362,12 @@ gb_application_activate (GApplication *application)
     gtk_source_file_set_location (file, gfile);
     g_object_unref (gfile);
 
-    document = g_object_new (GB_TYPE_EDITOR_DOCUMENT, "file", file, NULL);
+    language = gtk_source_language_manager_get_language (
+      gtk_source_language_manager_get_default (), "c");
+    document = g_object_new (GB_TYPE_EDITOR_DOCUMENT,
+                             "file", file,
+                             "language", language,
+                             NULL);
     g_object_unref (file);
 
     window = g_object_new (GTK_TYPE_WINDOW, NULL);
