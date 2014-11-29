@@ -19,17 +19,25 @@
 #define G_LOG_DOMAIN "code-assistant"
 
 #include <glib/gi18n.h>
+#include <gtksourceview/gtksource.h>
 
+#include "gb-editor-document.h"
+#include "gb-log.h"
 #include "gb-source-code-assistant.h"
+#include "gca-service.h"
 #include "gca-structs.h"
 
 struct _GbSourceCodeAssistantPrivate
 {
   GtkTextBuffer *buffer;
+  GcaService    *proxy;
   GArray        *diagnostics;
+
   gulong         changed_handler;
+  gulong         notify_language_handler;
+
   guint          parse_timeout;
-  guint          active : 1;
+  guint          active;
 };
 
 enum {
@@ -48,10 +56,14 @@ G_DEFINE_TYPE_WITH_PRIVATE (GbSourceCodeAssistant,
                             gb_source_code_assistant,
                             G_TYPE_OBJECT)
 
-static GParamSpec *gParamSpecs [LAST_PROP];
-static guint       gSignals [LAST_SIGNAL];
+static GParamSpec      *gParamSpecs [LAST_PROP];
+static guint            gSignals [LAST_SIGNAL];
+static GDBusConnection *gDBus;
 
 #define PARSE_TIMEOUT_MSEC 350
+
+static void
+gb_source_code_assistant_queue_parse (GbSourceCodeAssistant *assistant);
 
 GbSourceCodeAssistant *
 gb_source_code_assistant_new (GtkTextBuffer *buffer)
@@ -59,6 +71,101 @@ gb_source_code_assistant_new (GtkTextBuffer *buffer)
   return g_object_new (GB_TYPE_SOURCE_CODE_ASSISTANT,
                        "buffer", buffer,
                        NULL);
+}
+
+static void
+gb_source_code_assistant_inc_active (GbSourceCodeAssistant *assistant,
+                                     gint                   amount)
+{
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+
+  assistant->priv->active += amount;
+  g_object_notify_by_pspec (G_OBJECT (assistant), gParamSpecs [PROP_ACTIVE]);
+}
+
+static void
+gb_source_code_assistant_proxy_cb (GObject      *object,
+                                   GAsyncResult *result,
+                                   gpointer      user_data)
+{
+  GbSourceCodeAssistant *assistant = user_data;
+  GcaService *proxy;
+  GError *error = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+
+  gb_source_code_assistant_inc_active (assistant, -1);
+
+  proxy = gca_service_proxy_new_finish (result, &error);
+
+  if (!proxy)
+    {
+      g_message ("%s", error->message);
+      g_clear_error (&error);
+      EXIT;
+    }
+
+  g_clear_object (&assistant->priv->proxy);
+  assistant->priv->proxy = proxy;
+
+  gb_source_code_assistant_queue_parse (assistant);
+
+  g_object_unref (assistant);
+
+  EXIT;
+}
+
+static void
+gb_source_code_assistant_load_service (GbSourceCodeAssistant *assistant)
+{
+  GbSourceCodeAssistantPrivate *priv;
+  GtkSourceLanguage *language;
+  GtkSourceBuffer *buffer;
+  const gchar *lang_id;
+  gchar *name;
+  gchar *object_path;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+  g_return_if_fail (assistant->priv->buffer);
+
+  priv = assistant->priv;
+
+  if (!gDBus)
+    EXIT;
+
+  if (!GTK_SOURCE_IS_BUFFER (priv->buffer))
+    EXIT;
+
+  g_clear_object (&priv->proxy);
+
+  buffer = GTK_SOURCE_BUFFER (priv->buffer);
+  language = gtk_source_buffer_get_language (buffer);
+  if (!language)
+    EXIT;
+
+  lang_id = gtk_source_language_get_id (language);
+
+  name = g_strdup_printf ("org.gnome.CodeAssist.v1.%s", lang_id);
+  object_path = g_strdup_printf ("/org/gnome/CodeAssist/v1/%s", lang_id);
+
+  gb_source_code_assistant_inc_active (assistant, 1);
+
+  gca_service_proxy_new (gDBus,
+                         G_DBUS_PROXY_FLAGS_NONE,
+                         name,
+                         object_path,
+                         NULL,
+                         gb_source_code_assistant_proxy_cb,
+                         g_object_ref (assistant));
+
+  g_free (name);
+  g_free (object_path);
+
+  EXIT;
 }
 
 /**
@@ -81,14 +188,81 @@ gb_source_code_assistant_get_diagnostics (GbSourceCodeAssistant *assistant)
   return NULL;
 }
 
+static void
+gb_source_code_assistant_parse_cb (GObject      *source_object,
+                                   GAsyncResult *result,
+                                   gpointer      user_data)
+{
+  GbSourceCodeAssistant *assistant = user_data;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+
+  gb_source_code_assistant_inc_active (assistant, -1);
+  g_object_unref (assistant);
+
+  EXIT;
+}
+
 static gboolean
 gb_source_code_assistant_do_parse (gpointer data)
 {
+  GbSourceCodeAssistantPrivate *priv;
   GbSourceCodeAssistant *assistant = data;
+  GtkTextMark *insert;
+  GtkTextIter iter;
+  GVariant *cursor;
+  GVariant *options;
+  GFile *gfile = NULL;
+  gchar *path = NULL;
+  gint64 line;
+  gint64 line_offset;
 
-  assistant->priv->parse_timeout = 0;
+  ENTRY;
 
-  return G_SOURCE_REMOVE;
+  g_return_val_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant), FALSE);
+
+  priv = assistant->priv;
+
+  priv->parse_timeout = 0;
+
+  if (!priv->proxy)
+    RETURN (G_SOURCE_REMOVE);
+
+  gb_source_code_assistant_inc_active (assistant, 1);
+
+  insert = gtk_text_buffer_get_insert (priv->buffer);
+  gtk_text_buffer_get_iter_at_mark (priv->buffer, &iter, insert);
+  line = gtk_text_iter_get_line (&iter);
+  line_offset = gtk_text_iter_get_line_offset (&iter);
+  cursor = g_variant_new ("(xx)", line, line_offset);
+  options = g_variant_new ("a{sv}", 0);
+
+  if (GB_IS_EDITOR_DOCUMENT (priv->buffer))
+    {
+      GtkSourceFile *file;
+
+      file = gb_editor_document_get_file (GB_EDITOR_DOCUMENT (priv->buffer));
+      if (file)
+        gfile = gtk_source_file_get_location (file);
+    }
+
+  if (gfile)
+    path = g_file_get_path (gfile);
+
+  gca_service_call_parse (priv->proxy,
+                          path,
+                          "", // tmpfile,
+                          cursor,
+                          options,
+                          NULL,
+                          gb_source_code_assistant_parse_cb,
+                          g_object_ref (assistant));
+
+  g_free (path);
+
+  RETURN (G_SOURCE_REMOVE);
 }
 
 static void
@@ -103,6 +277,21 @@ gb_source_code_assistant_queue_parse (GbSourceCodeAssistant *assistant)
     g_timeout_add (PARSE_TIMEOUT_MSEC,
                    gb_source_code_assistant_do_parse,
                    assistant);
+}
+
+static void
+gb_source_code_assistant_buffer_notify_language (GbSourceCodeAssistant *assistant,
+                                                 GParamSpec            *pspec,
+                                                 GtkSourceBuffer       *buffer)
+{
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (assistant));
+  g_return_if_fail (GTK_SOURCE_IS_BUFFER (buffer));
+
+  gb_source_code_assistant_load_service (assistant);
+
+  EXIT;
 }
 
 static void
@@ -123,6 +312,10 @@ gb_source_code_assistant_disconnect (GbSourceCodeAssistant *assistant)
   g_signal_handler_disconnect (assistant->priv->buffer,
                                assistant->priv->changed_handler);
   assistant->priv->changed_handler = 0;
+
+  g_signal_handler_disconnect (assistant->priv->buffer,
+                               assistant->priv->notify_language_handler);
+  assistant->priv->notify_language_handler = 0;
 }
 
 static void
@@ -134,6 +327,13 @@ gb_source_code_assistant_connect (GbSourceCodeAssistant *assistant)
     g_signal_connect_object (assistant->priv->buffer,
                              "changed",
                              G_CALLBACK (gb_source_code_assistant_buffer_changed),
+                             assistant,
+                             G_CONNECT_SWAPPED);
+
+  assistant->priv->notify_language_handler =
+    g_signal_connect_object (assistant->priv->buffer,
+                             "notify::language",
+                             G_CALLBACK (gb_source_code_assistant_buffer_notify_language),
                              assistant,
                              G_CONNECT_SWAPPED);
 }
@@ -182,6 +382,8 @@ gb_source_code_assistant_set_buffer (GbSourceCodeAssistant *assistant,
           gb_source_code_assistant_connect (assistant);
         }
 
+      gb_source_code_assistant_load_service (assistant);
+
       g_object_notify_by_pspec (G_OBJECT (assistant),
                                 gParamSpecs [PROP_BUFFER]);
     }
@@ -223,6 +425,8 @@ gb_source_code_assistant_finalize (GObject *object)
                                  (gpointer *)&priv->buffer);
       priv->buffer = NULL;
     }
+
+  g_clear_object (&priv->proxy);
 
   G_OBJECT_CLASS (gb_source_code_assistant_parent_class)->finalize (object);
 }
@@ -273,10 +477,21 @@ static void
 gb_source_code_assistant_class_init (GbSourceCodeAssistantClass *klass)
 {
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
+  GError *error = NULL;
+  gchar *address = NULL;
 
   object_class->finalize = gb_source_code_assistant_finalize;
   object_class->get_property = gb_source_code_assistant_get_property;
   object_class->set_property = gb_source_code_assistant_set_property;
+
+  gParamSpecs [PROP_ACTIVE] =
+    g_param_spec_boolean ("active",
+                         _("Active"),
+                         _("If code assistance is currently processing."),
+                         FALSE,
+                         (G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (object_class, PROP_ACTIVE,
+                                   gParamSpecs [PROP_ACTIVE]);
 
   gParamSpecs [PROP_BUFFER] =
     g_param_spec_object ("buffer",
@@ -299,6 +514,30 @@ gb_source_code_assistant_class_init (GbSourceCodeAssistantClass *klass)
                   g_cclosure_marshal_VOID__VOID,
                   G_TYPE_NONE,
                   0);
+
+  address = g_dbus_address_get_for_bus_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (!address)
+    GOTO (failure);
+
+  gDBus = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (!gDBus)
+    GOTO (failure);
+
+#if 0
+  g_dbus_connection_set_exit_on_close (gDBus, FALSE);
+#endif
+
+failure:
+  if (error)
+    {
+      g_warning (_("Failed to load DBus connection. "
+                   "Code assistance will be disabled. "
+                   "\"%s\" (%s)"),
+                 error->message, address);
+      g_clear_error (&error);
+    }
+
+  g_free (address);
 }
 
 static void
