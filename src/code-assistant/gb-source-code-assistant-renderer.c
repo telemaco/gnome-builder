@@ -16,8 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define G_LOG_DOMAIN "code-assist-gutter"
+
 #include <glib/gi18n.h>
 
+#include "gb-log.h"
 #include "gb-source-code-assistant.h"
 #include "gb-source-code-assistant-renderer.h"
 #include "gca-structs.h"
@@ -168,7 +171,7 @@ gb_source_code_assistant_renderer_disconnect (GbSourceCodeAssistantRenderer *ren
 
   g_signal_handler_disconnect (renderer->priv->code_assistant,
                                renderer->priv->changed_handler);
-  renderer->priv->code_assistant = 0;
+  renderer->priv->changed_handler = 0;
 }
 
 void
@@ -187,12 +190,16 @@ gb_source_code_assistant_renderer_set_code_assistant (GbSourceCodeAssistantRende
       if (priv->code_assistant)
         {
           gb_source_code_assistant_renderer_disconnect (renderer);
-          g_clear_object (&priv->code_assistant);
+          g_object_remove_weak_pointer (G_OBJECT (priv->code_assistant),
+                                        (gpointer *)&priv->code_assistant);
+          priv->code_assistant = NULL;
         }
 
       if (code_assistant)
         {
-          priv->code_assistant = g_object_ref (code_assistant);
+          priv->code_assistant = code_assistant;
+          g_object_add_weak_pointer (G_OBJECT (priv->code_assistant),
+                                     (gpointer *)&priv->code_assistant);
           gb_source_code_assistant_renderer_connect (renderer);
         }
 
@@ -254,12 +261,22 @@ gb_source_code_assistant_renderer_finalize (GObject *object)
 {
   GbSourceCodeAssistantRendererPrivate *priv;
 
+  ENTRY;
+
   priv = GB_SOURCE_CODE_ASSISTANT_RENDERER (object)->priv;
 
-  g_clear_object (&priv->code_assistant);
+  if (priv->code_assistant)
+    {
+      g_object_remove_weak_pointer (G_OBJECT (priv->code_assistant),
+                                    (gpointer *)&priv->code_assistant);
+      priv->code_assistant = NULL;
+    }
+
   g_clear_pointer (&priv->line_to_severity_hash, g_hash_table_unref);
 
   G_OBJECT_CLASS (gb_source_code_assistant_renderer_parent_class)->finalize (object);
+
+  EXIT;
 }
 
 static void
