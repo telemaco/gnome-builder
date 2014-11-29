@@ -19,6 +19,7 @@
 #define G_LOG_DOMAIN "code-assistant"
 
 #include <glib/gi18n.h>
+#include <glib/gstdio.h>
 #include <gtksourceview/gtksource.h>
 
 #include "gb-editor-document.h"
@@ -32,6 +33,9 @@ struct _GbSourceCodeAssistantPrivate
   GtkTextBuffer *buffer;
   GcaService    *proxy;
   GArray        *diagnostics;
+
+  gchar         *tmpfile_path;
+  int            tmpfile_fd;
 
   gulong         changed_handler;
   gulong         notify_language_handler;
@@ -210,12 +214,16 @@ gb_source_code_assistant_do_parse (gpointer data)
 {
   GbSourceCodeAssistantPrivate *priv;
   GbSourceCodeAssistant *assistant = data;
+  GError *error = NULL;
   GtkTextMark *insert;
   GtkTextIter iter;
+  GtkTextIter begin;
+  GtkTextIter end;
   GVariant *cursor;
   GVariant *options;
   GFile *gfile = NULL;
   gchar *path = NULL;
+  gchar *text = NULL;
   gint64 line;
   gint64 line_offset;
 
@@ -229,8 +237,6 @@ gb_source_code_assistant_do_parse (gpointer data)
 
   if (!priv->proxy)
     RETURN (G_SOURCE_REMOVE);
-
-  gb_source_code_assistant_inc_active (assistant, 1);
 
   insert = gtk_text_buffer_get_insert (priv->buffer);
   gtk_text_buffer_get_iter_at_mark (priv->buffer, &iter, insert);
@@ -251,16 +257,45 @@ gb_source_code_assistant_do_parse (gpointer data)
   if (gfile)
     path = g_file_get_path (gfile);
 
+  if (!priv->tmpfile_path)
+    {
+      int fd;
+
+      fd = g_file_open_tmp ("builder-code-assistant.XXXXXX",
+                            &priv->tmpfile_path,
+                            &error);
+      if (fd == -1)
+        {
+          g_warning ("%s", error->message);
+          g_clear_error (&error);
+          GOTO (failure);
+        }
+
+      priv->tmpfile_fd = fd;
+    }
+
+  gtk_text_buffer_get_bounds (priv->buffer, &begin, &end);
+  text = gtk_text_buffer_get_text (priv->buffer, &begin, &end, TRUE);
+  if (!g_file_set_contents (priv->tmpfile_path, text, -1, &error))
+    {
+      g_warning ("%s", error->message);
+      g_clear_error (&error);
+      GOTO (failure);
+    }
+
+  gb_source_code_assistant_inc_active (assistant, 1);
   gca_service_call_parse (priv->proxy,
                           path,
-                          "", // tmpfile,
+                          priv->tmpfile_path,
                           cursor,
                           options,
                           NULL,
                           gb_source_code_assistant_parse_cb,
                           g_object_ref (assistant));
 
+failure:
   g_free (path);
+  g_free (text);
 
   RETURN (G_SOURCE_REMOVE);
 }
@@ -411,6 +446,8 @@ gb_source_code_assistant_finalize (GObject *object)
 {
   GbSourceCodeAssistantPrivate *priv;
 
+  ENTRY;
+
   priv = GB_SOURCE_CODE_ASSISTANT (object)->priv;
 
   if (priv->parse_timeout)
@@ -428,7 +465,18 @@ gb_source_code_assistant_finalize (GObject *object)
 
   g_clear_object (&priv->proxy);
 
+  if (priv->tmpfile_path)
+    {
+      g_unlink (priv->tmpfile_path);
+      g_clear_pointer (&priv->tmpfile_path, g_free);
+    }
+
+  close (priv->tmpfile_fd);
+  priv->tmpfile_fd = -1;
+
   G_OBJECT_CLASS (gb_source_code_assistant_parent_class)->finalize (object);
+
+  EXIT;
 }
 
 static void
@@ -544,4 +592,5 @@ static void
 gb_source_code_assistant_init (GbSourceCodeAssistant *assistant)
 {
   assistant->priv = gb_source_code_assistant_get_instance_private (assistant);
+  assistant->priv->tmpfile_fd = -1;
 }
