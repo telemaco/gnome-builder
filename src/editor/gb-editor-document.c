@@ -180,10 +180,116 @@ gb_editor_document_add_diagnostic (GbEditorDocument *document,
 }
 
 static void
+apply_tag_style (GbEditorDocument *document,
+                 GtkTextTag       *tag,
+                 const gchar      *style_id)
+{
+  GtkSourceStyleScheme *scheme;
+  GtkSourceStyle *style;
+  gboolean background_set;
+  gboolean bold_set;
+  gboolean foreground_set;
+  gboolean line_background_set;
+  gchar *str;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+
+  scheme = gtk_source_buffer_get_style_scheme (GTK_SOURCE_BUFFER (document));
+  if (!scheme)
+    return;
+
+  style = gtk_source_style_scheme_get_style (scheme, style_id);
+  if (!style)
+    return;
+
+  g_object_get (style,
+                "background-set", &background_set,
+                "bold-set", &bold_set,
+                "foreground-set", &foreground_set,
+                "line-background-set", &line_background_set,
+                NULL);
+
+  if (background_set)
+    {
+      g_object_get (style, "background", &str, NULL);
+      g_object_set (tag, "background", str, NULL);
+      g_free (str);
+    }
+  else
+    g_object_set (tag, "background-set", FALSE, NULL);
+
+  if (bold_set)
+    {
+      PangoWeight weight;
+      gboolean bold;
+
+      g_object_get (style, "bold", &bold, NULL);
+      weight = bold ? PANGO_WEIGHT_NORMAL : PANGO_WEIGHT_BOLD;
+      g_object_set (tag, "weight", weight, NULL);
+    }
+  else
+    g_object_set (tag, "weight-set", FALSE, NULL);
+
+  if (foreground_set)
+    {
+      g_object_get (style, "foreground", &str, NULL);
+      g_object_set (tag, "foreground", str, NULL);
+      g_free (str);
+    }
+  else
+    g_object_set (tag, "foreground-set", FALSE, NULL);
+
+  if (line_background_set)
+    {
+      g_object_get (style, "line-background", &str, NULL);
+      g_object_set (tag, "paragraph-background", str, NULL);
+      g_free (str);
+    }
+  else
+    g_object_set (tag, "paragraph-background-set", FALSE, NULL);
+}
+
+static GtkTextTag *
+gb_editor_document_get_error_tag (GbEditorDocument *document)
+{
+  GtkTextBuffer *buffer;
+  GtkTextTagTable *tag_table;
+  GtkTextTag *tag;
+
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), NULL);
+
+  buffer = GTK_TEXT_BUFFER (document);
+  tag_table = gtk_text_buffer_get_tag_table (buffer);
+  tag = gtk_text_tag_table_lookup (tag_table, "ErrorTag");
+
+  if (!tag)
+    {
+      tag = gtk_text_buffer_create_tag (buffer, "ErrorTag",
+                                        "underline", PANGO_UNDERLINE_ERROR,
+                                        NULL);
+      apply_tag_style (document, tag, "def:error");
+    }
+
+  return tag;
+}
+
+static void
+gb_editor_document_notify_style_scheme (GbEditorDocument *document,
+                                        GParamSpec       *pspec,
+                                        gpointer          unused)
+{
+  GtkTextTag *tag;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+
+  tag = gb_editor_document_get_error_tag (document);
+  apply_tag_style (document, tag, "def:error");
+}
+
+static void
 gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
                                            GbSourceCodeAssistant *code_assistant)
 {
-  GtkTextTagTable *tag_table;
   GtkTextIter begin;
   GtkTextIter end;
   GtkTextTag *tag;
@@ -199,12 +305,7 @@ gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
    * iteratively in the background based interactivity.
    */
 
-  tag_table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (document));
-  tag = gtk_text_tag_table_lookup (tag_table, "ErrorTag");
-  if (!tag)
-    tag = gtk_text_buffer_create_tag (GTK_TEXT_BUFFER (document), "ErrorTag",
-                                      "underline", PANGO_UNDERLINE_ERROR,
-                                      NULL);
+  tag = gb_editor_document_get_error_tag (document);
 
   gtk_text_buffer_get_bounds (GTK_TEXT_BUFFER (document), &begin, &end);
   gtk_text_buffer_remove_tag (GTK_TEXT_BUFFER (document), tag, &begin, &end);
@@ -360,4 +461,9 @@ gb_editor_document_init (GbEditorDocument *document)
                            G_CALLBACK (gb_editor_document_code_assistant_changed),
                            document,
                            G_CONNECT_SWAPPED);
+
+  g_signal_connect (document,
+                    "notify::style-scheme",
+                    G_CALLBACK (gb_editor_document_notify_style_scheme),
+                    NULL);
 }
