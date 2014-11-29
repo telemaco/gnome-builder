@@ -59,7 +59,7 @@ gb_source_code_assistant_renderer_add_diagnostic_range (GbSourceCodeAssistantRen
                                                         GcaDiagnostic                 *diag,
                                                         GcaSourceRange                *range)
 {
-  guint i;
+  gint64 i;
 
   g_assert (GB_IS_SOURCE_CODE_ASSISTANT_RENDERER (renderer));
   g_assert (diag);
@@ -79,8 +79,8 @@ gb_source_code_assistant_renderer_add_diagnostic_range (GbSourceCodeAssistantRen
       if (GPOINTER_TO_INT (val) < diag->severity)
         val = GINT_TO_POINTER (diag->severity);
 
-      g_hash_table_insert (renderer->priv->line_to_severity_hash,
-                           GINT_TO_POINTER (i), val);
+      g_hash_table_replace (renderer->priv->line_to_severity_hash,
+                            GINT_TO_POINTER (i), val);
     }
 }
 
@@ -89,7 +89,6 @@ gb_source_code_assistant_renderer_changed (GbSourceCodeAssistantRenderer *render
                                            GbSourceCodeAssistant         *code_assistant)
 {
   GbSourceCodeAssistantRendererPrivate *priv;
-  guint i;
 
   g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT_RENDERER (renderer));
   g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (code_assistant));
@@ -108,19 +107,25 @@ gb_source_code_assistant_renderer_changed (GbSourceCodeAssistantRenderer *render
 
   if (priv->diagnostics)
     {
+      guint i;
+
       for (i = 0; i < priv->diagnostics->len; i++)
         {
           GcaDiagnostic *diag;
-          guint j;
 
           diag = &g_array_index (priv->diagnostics, GcaDiagnostic, i);
 
-          for (j = 0; j < diag->locations->len; j++)
+          if (diag->locations)
             {
-              GcaSourceRange *range;
+              guint j;
 
-              range = &g_array_index (diag->locations, GcaSourceRange, i);
-              gb_source_code_assistant_renderer_add_diagnostic_range (renderer, diag, range);
+              for (j = 0; j < diag->locations->len; j++)
+                {
+                  GcaSourceRange *range;
+
+                  range = &g_array_index (diag->locations, GcaSourceRange, j);
+                  gb_source_code_assistant_renderer_add_diagnostic_range (renderer, diag, range);
+                }
             }
         }
     }
