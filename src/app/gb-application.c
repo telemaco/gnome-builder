@@ -375,6 +375,7 @@ gb_application_activate (GApplication *application)
                           "document", document,
                           "visible", TRUE,
                           NULL);
+    g_object_unref (document);
     gtk_container_add (GTK_CONTAINER (window), GTK_WIDGET (frame));
     gtk_window_present (window);
   }
