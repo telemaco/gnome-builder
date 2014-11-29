@@ -22,6 +22,7 @@
 #include <gtksourceview/gtksource.h>
 
 #include "gb-editor-document.h"
+#include "gb-log.h"
 
 struct _GbEditorDocumentPrivate
 {
@@ -150,12 +151,16 @@ gb_editor_document_finalize (GObject *object)
 {
   GbEditorDocumentPrivate *priv = GB_EDITOR_DOCUMENT (object)->priv;
 
+  ENTRY;
+
   g_clear_object (&priv->file);
   g_clear_object (&priv->file_binding);
   g_clear_object (&priv->change_monitor);
   g_clear_object (&priv->code_assistant);
 
   G_OBJECT_CLASS(gb_editor_document_parent_class)->finalize (object);
+
+  EXIT;
 }
 
 static void
