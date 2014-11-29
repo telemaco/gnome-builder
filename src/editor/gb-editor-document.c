@@ -27,7 +27,6 @@
 struct _GbEditorDocumentPrivate
 {
   GtkSourceFile         *file;
-  GBinding              *file_binding;
   GbSourceChangeMonitor *change_monitor;
   GbSourceCodeAssistant *code_assistant;
 };
@@ -94,15 +93,13 @@ gb_editor_document_set_file (GbEditorDocument *document,
   if (file != priv->file)
     {
       g_clear_object (&priv->file);
-      g_clear_object (&priv->file_binding);
 
       if (file)
         {
           priv->file = g_object_ref (file);
-          priv->file_binding =
-            g_object_bind_property (priv->file, "location",
-                                    priv->change_monitor, "file",
-                                    G_BINDING_SYNC_CREATE);
+          g_object_bind_property (priv->file, "location",
+                                  priv->change_monitor, "file",
+                                  G_BINDING_SYNC_CREATE);
         }
 
       g_object_notify_by_pspec (G_OBJECT (document), gParamSpecs [PROP_FILE]);
@@ -154,7 +151,6 @@ gb_editor_document_finalize (GObject *object)
   ENTRY;
 
   g_clear_object (&priv->file);
-  g_clear_object (&priv->file_binding);
   g_clear_object (&priv->change_monitor);
   g_clear_object (&priv->code_assistant);
 
