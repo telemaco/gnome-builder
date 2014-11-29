@@ -32,12 +32,16 @@ struct _GbSourceCodeAssistantPrivate
   guint          active : 1;
 };
 
-enum
-{
+enum {
   PROP_0,
   PROP_ACTIVE,
   PROP_BUFFER,
   LAST_PROP
+};
+
+enum {
+  CHANGED,
+  LAST_SIGNAL
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbSourceCodeAssistant,
@@ -45,6 +49,7 @@ G_DEFINE_TYPE_WITH_PRIVATE (GbSourceCodeAssistant,
                             G_TYPE_OBJECT)
 
 static GParamSpec *gParamSpecs [LAST_PROP];
+static guint       gSignals [LAST_SIGNAL];
 
 #define PARSE_TIMEOUT_MSEC 350
 
@@ -283,6 +288,17 @@ gb_source_code_assistant_class_init (GbSourceCodeAssistantClass *klass)
                           G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (object_class, PROP_BUFFER,
                                    gParamSpecs [PROP_BUFFER]);
+
+  gSignals [CHANGED] =
+    g_signal_new ("changed",
+                  GB_TYPE_SOURCE_CODE_ASSISTANT,
+                  G_SIGNAL_RUN_FIRST,
+                  G_STRUCT_OFFSET (GbSourceCodeAssistantClass, changed),
+                  NULL,
+                  NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE,
+                  0);
 }
 
 static void

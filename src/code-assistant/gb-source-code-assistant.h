@@ -47,6 +47,8 @@ struct _GbSourceCodeAssistant
 struct _GbSourceCodeAssistantClass
 {
   GObjectClass parent_class;
+
+  void (*changed) (GbSourceCodeAssistant *assistant);
 };
 
 GType                  gb_source_code_assistant_get_type        (void) G_GNUC_CONST;
