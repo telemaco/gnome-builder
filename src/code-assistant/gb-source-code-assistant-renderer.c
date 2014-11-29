@@ -254,6 +254,9 @@ gb_source_code_assistant_renderer_finalize (GObject *object)
       priv->code_assistant = NULL;
     }
 
+  if (priv->diagnostics)
+    g_clear_pointer (&priv->diagnostics, g_array_unref);
+
   g_clear_pointer (&priv->line_to_severity_hash, g_hash_table_unref);
 
   G_OBJECT_CLASS (gb_source_code_assistant_renderer_parent_class)->finalize (object);
