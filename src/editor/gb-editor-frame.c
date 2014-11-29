@@ -270,12 +270,18 @@ gb_editor_frame_connect (GbEditorFrame    *frame,
                 NULL);
 
   /*
-   * Connect code assistance to gutter.
+   * Connect code assistance to gutter and spinner.
    */
   code_assistant = gb_editor_document_get_code_assistant (document);
   g_object_set (priv->code_assistant_renderer,
                 "code-assistant", code_assistant,
                 NULL);
+  g_object_bind_property (code_assistant, "active",
+                          priv->busy_spinner, "active",
+                          G_BINDING_SYNC_CREATE);
+  g_object_bind_property (code_assistant, "active",
+                          priv->busy_spinner, "visible",
+                          G_BINDING_SYNC_CREATE);
 
   /*
    * Create search defaults for this frame.
