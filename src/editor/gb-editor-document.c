@@ -23,6 +23,7 @@
 
 #include "gb-editor-document.h"
 #include "gb-log.h"
+#include "gca-structs.h"
 
 struct _GbEditorDocumentPrivate
 {
@@ -141,6 +142,92 @@ gb_editor_document_changed (GtkTextBuffer *buffer)
   g_signal_emit (buffer, gSignals [CURSOR_MOVED], 0);
 
   GTK_TEXT_BUFFER_CLASS (gb_editor_document_parent_class)->changed (buffer);
+}
+
+static void
+gb_editor_document_add_diagnostic (GbEditorDocument *document,
+                                   GcaDiagnostic    *diag,
+                                   GcaSourceRange   *range)
+{
+  GtkTextBuffer *buffer;
+  GtkTextIter begin;
+  GtkTextIter end;
+  guint column;
+
+  g_assert (GB_IS_EDITOR_DOCUMENT (document));
+  g_assert (diag);
+  g_assert (range);
+
+  if (range->begin.line == -1 || range->end.line == -1)
+    return;
+
+  buffer = GTK_TEXT_BUFFER (document);
+
+  gtk_text_buffer_get_iter_at_line (buffer, &begin, range->begin.line);
+  for (column = range->begin.column; column; column--)
+    if (gtk_text_iter_ends_line (&begin) || !gtk_text_iter_forward_char (&begin))
+      break;
+
+  gtk_text_buffer_get_iter_at_line (buffer, &end, range->end.line);
+  for (column = range->end.column; column; column--)
+    if (gtk_text_iter_ends_line (&end) || !gtk_text_iter_forward_char (&end))
+      break;
+
+  if (gtk_text_iter_equal (&begin, &end))
+    gtk_text_iter_forward_to_line_end (&end);
+
+  gtk_text_buffer_apply_tag_by_name (buffer, "ErrorTag", &begin, &end);
+}
+
+static void
+gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
+                                           GbSourceCodeAssistant *code_assistant)
+{
+  GtkTextTagTable *tag_table;
+  GtkTextIter begin;
+  GtkTextIter end;
+  GtkTextTag *tag;
+  GArray *ar;
+  guint i;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+  g_return_if_fail (GB_IS_SOURCE_CODE_ASSISTANT (code_assistant));
+
+  /*
+   * Update all of the error tags in the buffer based on the diagnostics
+   * returned from code assistance. We might want to find a way to do this
+   * iteratively in the background based interactivity.
+   */
+
+  tag_table = gtk_text_buffer_get_tag_table (GTK_TEXT_BUFFER (document));
+  tag = gtk_text_tag_table_lookup (tag_table, "ErrorTag");
+  if (!tag)
+    tag = gtk_text_buffer_create_tag (GTK_TEXT_BUFFER (document), "ErrorTag",
+                                      "underline", PANGO_UNDERLINE_ERROR,
+                                      NULL);
+
+  gtk_text_buffer_get_bounds (GTK_TEXT_BUFFER (document), &begin, &end);
+  gtk_text_buffer_remove_tag (GTK_TEXT_BUFFER (document), tag, &begin, &end);
+
+  ar = gb_source_code_assistant_get_diagnostics (code_assistant);
+
+  for (i = 0; i < ar->len; i++)
+    {
+      GcaDiagnostic *diag;
+      guint j;
+
+      diag = &g_array_index (ar, GcaDiagnostic, i);
+
+      for (j = 0; j < diag->locations->len; j++)
+        {
+          GcaSourceRange *range;
+
+          range = &g_array_index (diag->locations, GcaSourceRange, j);
+          gb_editor_document_add_diagnostic (document, diag, range);
+        }
+    }
+
+  g_array_unref (ar);
 }
 
 static void
@@ -263,7 +350,14 @@ static void
 gb_editor_document_init (GbEditorDocument *document)
 {
   document->priv = gb_editor_document_get_instance_private (document);
+
   document->priv->file = gtk_source_file_new ();
   document->priv->change_monitor = gb_source_change_monitor_new (GTK_TEXT_BUFFER (document));
   document->priv->code_assistant = gb_source_code_assistant_new (GTK_TEXT_BUFFER (document));
+
+  g_signal_connect_object (document->priv->code_assistant,
+                           "changed",
+                           G_CALLBACK (gb_editor_document_code_assistant_changed),
+                           document,
+                           G_CONNECT_SWAPPED);
 }
