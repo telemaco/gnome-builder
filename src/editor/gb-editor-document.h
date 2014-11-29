@@ -22,6 +22,7 @@
 #include <gtksourceview/gtksourcebuffer.h>
 
 #include "gb-source-change-monitor.h"
+#include "gb-source-code-assistant.h"
 
 G_BEGIN_DECLS
 
@@ -58,6 +59,7 @@ GtkSourceFile         *gb_editor_document_get_file           (GbEditorDocument *
 void                   gb_editor_document_set_file           (GbEditorDocument *document,
                                                               GtkSourceFile    *file);
 GbSourceChangeMonitor *gb_editor_document_get_change_monitor (GbEditorDocument *document);
+GbSourceCodeAssistant *gb_editor_document_get_code_assistant (GbEditorDocument *document);
 
 G_END_DECLS
 

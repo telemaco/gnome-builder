@@ -26,8 +26,9 @@
 struct _GbEditorDocumentPrivate
 {
   GtkSourceFile         *file;
-  GbSourceChangeMonitor *change_monitor;
   GBinding              *file_binding;
+  GbSourceChangeMonitor *change_monitor;
+  GbSourceCodeAssistant *code_assistant;
 };
 
 enum {
@@ -60,6 +61,14 @@ gb_editor_document_get_change_monitor (GbEditorDocument *document)
   g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), NULL);
 
   return document->priv->change_monitor;
+}
+
+GbSourceCodeAssistant *
+gb_editor_document_get_code_assistant (GbEditorDocument *document)
+{
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), NULL);
+
+  return document->priv->code_assistant;
 }
 
 GtkSourceFile *
@@ -144,6 +153,7 @@ gb_editor_document_finalize (GObject *object)
   g_clear_object (&priv->file);
   g_clear_object (&priv->file_binding);
   g_clear_object (&priv->change_monitor);
+  g_clear_object (&priv->code_assistant);
 
   G_OBJECT_CLASS(gb_editor_document_parent_class)->finalize (object);
 }
@@ -254,4 +264,5 @@ gb_editor_document_init (GbEditorDocument *document)
   document->priv = gb_editor_document_get_instance_private (document);
   document->priv->file = gtk_source_file_new ();
   document->priv->change_monitor = gb_source_change_monitor_new (GTK_TEXT_BUFFER (document));
+  document->priv->code_assistant = gb_source_code_assistant_new (GTK_TEXT_BUFFER (document));
 }
