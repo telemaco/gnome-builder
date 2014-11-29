@@ -27,6 +27,7 @@
 #include "gb-source-search-highlighter.h"
 #include "gb-source-view.h"
 #include "gd-tagged-entry.h"
+#include "gca-structs.h"
 #include "nautilus-floating-bar.h"
 
 struct _GbEditorFramePrivate
@@ -503,6 +504,72 @@ gb_editor_frame_on_begin_search (GbEditorFrame    *frame,
     }
 }
 
+static gboolean
+gb_editor_frame_on_query_tooltip (GbEditorFrame *frame,
+                                  gint           x,
+                                  gint           y,
+                                  gboolean       keyboard_mode,
+                                  GtkTooltip    *tooltip,
+                                  GbSourceView  *source_view)
+{
+  GbEditorFramePrivate *priv;
+  GbSourceCodeAssistant *code_assistant;
+  GtkTextIter iter;
+  GArray *ar;
+  gboolean ret = FALSE;
+  guint line;
+  guint i;
+
+  g_assert (GB_IS_SOURCE_VIEW (source_view));
+  g_assert (GB_IS_EDITOR_FRAME (frame));
+
+  priv = frame->priv;
+
+  code_assistant = gb_editor_document_get_code_assistant (priv->document);
+  if (!code_assistant)
+    return FALSE;
+
+  ar = gb_source_code_assistant_get_diagnostics (code_assistant);
+  if (!ar)
+    return FALSE;
+
+  gtk_text_view_window_to_buffer_coords (GTK_TEXT_VIEW (source_view),
+                                         GTK_TEXT_WINDOW_WIDGET,
+                                         x, y, &x, &y);
+
+  gtk_text_view_get_iter_at_location (GTK_TEXT_VIEW (source_view),
+                                      &iter, x, y);
+
+  line = gtk_text_iter_get_line (&iter);
+
+  for (i = 0; i < ar->len; i++)
+    {
+      GcaDiagnostic *diag;
+      guint j;
+
+      diag = &g_array_index (ar, GcaDiagnostic, i);
+
+      for (j = 0; j < diag->locations->len; j++)
+        {
+          GcaSourceRange *loc;
+
+          loc = &g_array_index (diag->locations, GcaSourceRange, j);
+
+          if ((loc->begin.line <= line) && (loc->end.line >= line))
+            {
+              gtk_tooltip_set_text (tooltip, diag->message);
+              ret = TRUE;
+              goto cleanup;
+            }
+        }
+    }
+
+cleanup:
+  g_array_unref (ar);
+
+  return ret;
+}
+
 static void
 gb_editor_frame_finalize (GObject *object)
 {
@@ -575,6 +642,12 @@ gb_editor_frame_constructed (GObject *object)
   g_signal_connect_object (priv->source_view,
                            "begin-search",
                            G_CALLBACK (gb_editor_frame_on_begin_search),
+                           frame,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (priv->source_view,
+                           "query-tooltip",
+                           G_CALLBACK (gb_editor_frame_on_query_tooltip),
                            frame,
                            G_CONNECT_SWAPPED);
 }
