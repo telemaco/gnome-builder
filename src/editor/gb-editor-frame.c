@@ -23,6 +23,7 @@
 #include "gb-editor-frame.h"
 #include "gb-log.h"
 #include "gb-source-change-gutter-renderer.h"
+#include "gb-source-code-assistant-renderer.h"
 #include "gb-source-search-highlighter.h"
 #include "gb-source-view.h"
 #include "gd-tagged-entry.h"
@@ -31,25 +32,26 @@
 struct _GbEditorFramePrivate
 {
   /* Widgets owned by GtkBuilder */
-  GtkSpinner                   *busy_spinner;
-  GbSourceChangeGutterRenderer *diff_renderer;
-  NautilusFloatingBar          *floating_bar;
-  GtkButton                    *forward_search;
-  GtkButton                    *backward_search;
-  GtkScrolledWindow            *scrolled_window;
-  GtkRevealer                  *search_revealer;
-  GdTaggedEntry                *search_entry;
-  GdTaggedEntryTag             *search_entry_tag;
-  GbSourceView                 *source_view;
+  GtkSpinner                    *busy_spinner;
+  GbSourceChangeGutterRenderer  *diff_renderer;
+  GbSourceCodeAssistantRenderer *code_assistant_renderer;
+  NautilusFloatingBar           *floating_bar;
+  GtkButton                     *forward_search;
+  GtkButton                     *backward_search;
+  GtkScrolledWindow             *scrolled_window;
+  GtkRevealer                   *search_revealer;
+  GdTaggedEntry                 *search_entry;
+  GdTaggedEntryTag              *search_entry_tag;
+  GbSourceView                  *source_view;
 
   /* Objects owned by GbEditorFrame */
-  GbEditorDocument             *document;
-  GtkSourceSearchContext       *search_context;
-  GtkSourceSearchSettings      *search_settings;
-  GbSourceSearchHighlighter    *search_highlighter;
+  GbEditorDocument              *document;
+  GtkSourceSearchContext        *search_context;
+  GtkSourceSearchSettings       *search_settings;
+  GbSourceSearchHighlighter     *search_highlighter;
 
   /* Signal handler identifiers */
-  gulong                        cursor_moved_handler;
+  gulong                         cursor_moved_handler;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorFrame, gb_editor_frame, GTK_TYPE_OVERLAY)
@@ -242,6 +244,7 @@ gb_editor_frame_connect (GbEditorFrame    *frame,
 {
   GbEditorFramePrivate *priv;
   GbSourceChangeMonitor *monitor;
+  GbSourceCodeAssistant *code_assistant;
 
   ENTRY;
 
@@ -251,31 +254,48 @@ gb_editor_frame_connect (GbEditorFrame    *frame,
 
   priv = frame->priv;
 
+  /*
+   * Save the document for later.
+   */
   priv->document = g_object_ref (document);
-
   gtk_text_view_set_buffer (GTK_TEXT_VIEW (priv->source_view),
                             GTK_TEXT_BUFFER (priv->document));
 
+  /*
+   * Connect change monitor to gutter.
+   */
   monitor = gb_editor_document_get_change_monitor (document);
   g_object_set (priv->diff_renderer,
                 "change-monitor", monitor,
                 NULL);
 
+  /*
+   * Connect code assistance to gutter.
+   */
+  code_assistant = gb_editor_document_get_code_assistant (document);
+  g_object_set (priv->code_assistant_renderer,
+                "code-assistant", code_assistant,
+                NULL);
+
+  /*
+   * Create search defaults for this frame.
+   */
   priv->search_settings = g_object_new (GTK_SOURCE_TYPE_SEARCH_SETTINGS,
                                         NULL);
-
   priv->search_context = g_object_new (GTK_SOURCE_TYPE_SEARCH_CONTEXT,
                                        "buffer", priv->document,
                                        "settings", priv->search_settings,
                                        "highlight", TRUE,
                                        NULL);
-
   priv->search_highlighter =
     g_object_new (GB_TYPE_SOURCE_SEARCH_HIGHLIGHTER,
                   "search-context", priv->search_context,
                   "search-settings", priv->search_settings,
                   NULL);
 
+  /*
+   * Connect to cursor-moved signal to update cursor position label.
+   */
   if (GB_IS_EDITOR_DOCUMENT (priv->document))
     {
       priv->cursor_moved_handler =
@@ -309,6 +329,14 @@ gb_editor_frame_disconnect (GbEditorFrame *frame)
       g_signal_handler_disconnect (priv->document, priv->cursor_moved_handler);
       priv->cursor_moved_handler = 0;
     }
+
+  g_object_set (priv->diff_renderer,
+                "change-monitor", NULL,
+                NULL);
+
+  g_object_set (priv->code_assistant_renderer,
+                "code-assistant", NULL,
+                NULL);
 
   g_clear_object (&priv->document);
   g_clear_object (&priv->search_settings);
@@ -494,6 +522,7 @@ gb_editor_frame_constructed (GObject *object)
 
   gutter = gtk_source_view_get_gutter (GTK_SOURCE_VIEW (priv->source_view),
                                        GTK_TEXT_WINDOW_LEFT);
+
   priv->diff_renderer = g_object_new (GB_TYPE_SOURCE_CHANGE_GUTTER_RENDERER,
                                       "change-monitor", monitor,
                                       "size", 2,
@@ -503,6 +532,16 @@ gb_editor_frame_constructed (GObject *object)
   gtk_source_gutter_insert (gutter,
                             GTK_SOURCE_GUTTER_RENDERER (priv->diff_renderer),
                             0);
+
+  priv->code_assistant_renderer =
+    g_object_new (GB_TYPE_SOURCE_CODE_ASSISTANT_RENDERER,
+                  "code-assistant", NULL,
+                  "size", 16,
+                  "visible", TRUE,
+                  NULL);
+  gtk_source_gutter_insert (gutter,
+                            GTK_SOURCE_GUTTER_RENDERER (priv->code_assistant_renderer),
+                            -50);
 
   g_signal_connect_object (priv->source_view,
                            "focus-in-event",
