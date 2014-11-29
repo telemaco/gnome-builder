@@ -59,11 +59,6 @@ gb_source_code_assistant_renderer_add_diagnostic_range (GbSourceCodeAssistantRen
                                                         GcaDiagnostic                 *diag,
                                                         GcaSourceRange                *range)
 {
-  GtkTextBuffer *buffer;
-  GtkTextView *view;
-  GtkTextIter begin;
-  GtkTextIter end;
-  guint column;
   guint i;
 
   g_assert (GB_IS_SOURCE_CODE_ASSISTANT_RENDERER (renderer));
@@ -72,24 +67,6 @@ gb_source_code_assistant_renderer_add_diagnostic_range (GbSourceCodeAssistantRen
 
   if (range->begin.line == -1 || range->end.line == -1)
     return;
-
-  view = gtk_source_gutter_renderer_get_view (GTK_SOURCE_GUTTER_RENDERER (renderer));
-  buffer = gtk_text_view_get_buffer (view);
-
-  gtk_text_buffer_get_iter_at_line (buffer, &begin, range->begin.line);
-  for (column = range->begin.column; column; column--)
-    if (gtk_text_iter_ends_line (&begin) || !gtk_text_iter_forward_char (&begin))
-      break;
-
-  gtk_text_buffer_get_iter_at_line (buffer, &end, range->end.line);
-  for (column = range->end.column; column; column--)
-    if (gtk_text_iter_ends_line (&end) || !gtk_text_iter_forward_char (&end))
-      break;
-
-  if (gtk_text_iter_equal (&begin, &end))
-    gtk_text_iter_forward_to_line_end (&end);
-
-  gtk_text_buffer_apply_tag_by_name (buffer, "ErrorTag", &begin, &end);
 
   g_return_if_fail (renderer->priv->line_to_severity_hash);
 
