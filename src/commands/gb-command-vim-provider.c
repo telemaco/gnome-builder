@@ -20,7 +20,6 @@
 
 #include "gb-command-vim.h"
 #include "gb-command-vim-provider.h"
-#include "gb-editor-tab.h"
 #include "gb-source-vim.h"
 
 G_DEFINE_TYPE (GbCommandVimProvider, gb_command_vim_provider,
@@ -53,16 +52,20 @@ gb_command_vim_provider_lookup (GbCommandProvider *provider,
   /* Make sure vim-mode is enabled */
   if (!g_settings_get_boolean (settings, "vim-mode"))
     return NULL;
-  
+
   /* Make sure we have a workbench */
   workbench = gb_command_provider_get_workbench (provider);
   if (!GB_IS_WORKBENCH (workbench))
     return NULL;
 
+#if 0
   /* Make sure we have an editor tab last focused */
   active_tab = gb_command_provider_get_active_tab (provider);
   if (!GB_IS_EDITOR_TAB (active_tab))
     return NULL;
+#else
+  return NULL;
+#endif
 
   /* See if GbEditorVim recognizes this command */
   if (gb_source_vim_is_command (command_text))

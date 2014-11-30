@@ -18,7 +18,6 @@
 
 #include <glib/gi18n.h>
 
-#include "gb-editor-commands.h"
 #include "gb-editor-workspace.h"
 #include "gb-editor-workspace-private.h"
 #include "gb-tab-grid.h"
@@ -35,6 +34,7 @@ void
 gb_editor_workspace_open (GbEditorWorkspace *workspace,
                           GFile             *file)
 {
+#if 0
   GbEditorTab *tab;
 
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
@@ -48,13 +48,27 @@ gb_editor_workspace_open (GbEditorWorkspace *workspace,
   gb_tab_grid_focus_tab (workspace->priv->tab_grid, GB_TAB (tab));
 
   gb_editor_tab_open_file (tab, file);
+#endif
+}
+
+static void
+new_tab (GSimpleAction *action,
+         GVariant      *parameter,
+         gpointer       user_data)
+{
+  GbEditorWorkspace *workspace = user_data;
+  GbEditorTab *tab;
+
+  tab = g_object_new (GB_TYPE_EDITOR_TAB,
+                      "visible", TRUE,
+                      NULL);
+  gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                     GTK_WIDGET (tab));
 }
 
 static GActionGroup *
-gb_editor_workspace_get_actions (GbWorkspace * workspace)
+gb_editor_workspace_get_actions (GbWorkspace *workspace)
 {
-  g_return_val_if_fail (GB_IS_EDITOR_WORKSPACE (workspace), NULL);
-
   return G_ACTION_GROUP (GB_EDITOR_WORKSPACE (workspace)->priv->actions);
 }
 
@@ -105,11 +119,22 @@ gb_editor_workspace_class_init (GbEditorWorkspaceClass *klass)
 static void
 gb_editor_workspace_init (GbEditorWorkspace *workspace)
 {
+    const GActionEntry entries[] = {
+      { "new-tab", new_tab },
+    };
+
   workspace->priv = gb_editor_workspace_get_instance_private (workspace);
 
   workspace->priv->actions = g_simple_action_group_new ();
+  g_action_map_add_action_entries (G_ACTION_MAP (workspace->priv->actions),
+                                   entries, G_N_ELEMENTS (entries),
+                                   workspace);
+
   workspace->priv->command_map = g_hash_table_new (g_str_hash, g_str_equal);
 
   gtk_widget_init_template (GTK_WIDGET (workspace));
+
+#if 0
   gb_editor_commands_init (workspace);
+#endif
 }

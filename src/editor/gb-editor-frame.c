@@ -623,6 +623,16 @@ cleanup:
 }
 
 static void
+gb_editor_frame_grab_focus (GtkWidget *widget)
+{
+  GbEditorFrame *frame = (GbEditorFrame *)widget;
+
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+
+  gtk_widget_grab_focus (GTK_WIDGET (frame->priv->source_view));
+}
+
+static void
 gb_editor_frame_finalize (GObject *object)
 {
   GbEditorFrame *frame = GB_EDITOR_FRAME (object);
@@ -795,6 +805,8 @@ gb_editor_frame_class_init (GbEditorFrameClass *klass)
   object_class->finalize = gb_editor_frame_finalize;
   object_class->get_property = gb_editor_frame_get_property;
   object_class->set_property = gb_editor_frame_set_property;
+
+  widget_class->grab_focus = gb_editor_frame_grab_focus;
 
   gParamSpecs [PROP_DOCUMENT] =
     g_param_spec_object ("document",

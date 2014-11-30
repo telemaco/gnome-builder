@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if 0
+
 #include <glib/gi18n.h>
 
 #include "gb-command-vim.h"
@@ -212,3 +214,4 @@ gb_command_vim_init (GbCommandVim *self)
 {
   self->priv = gb_command_vim_get_instance_private (self);
 }
+#endif

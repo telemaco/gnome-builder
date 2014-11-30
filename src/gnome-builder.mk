@@ -49,10 +49,6 @@ libgnome_builder_la_SOURCES = \
 	src/devhelp/gb-devhelp-workspace.h \
 	src/editor/c-parse-helper.c \
 	src/editor/c-parse-helper.h \
-	src/editor/gb-editor-code-assistant.c \
-	src/editor/gb-editor-code-assistant.h \
-	src/editor/gb-editor-commands.c \
-	src/editor/gb-editor-commands.h \
 	src/editor/gb-editor-document.c \
 	src/editor/gb-editor-document.h \
 	src/editor/gb-editor-file-mark.c \
@@ -67,7 +63,6 @@ libgnome_builder_la_SOURCES = \
 	src/editor/gb-editor-settings-widget.h \
 	src/editor/gb-editor-tab.c \
 	src/editor/gb-editor-tab.h \
-	src/editor/gb-editor-tab-private.h \
 	src/editor/gb-editor-workspace.c \
 	src/editor/gb-editor-workspace.h \
 	src/editor/gb-editor-workspace-private.h \
