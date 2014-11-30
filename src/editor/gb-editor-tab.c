@@ -438,6 +438,21 @@ gb_editor_tab_on_notify_location (GbEditorTab   *tab,
 }
 
 static void
+gb_editor_tab_on_modified_changed (GbEditorTab   *tab,
+                                   GtkTextBuffer *buffer)
+{
+  gboolean modified;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  modified = gtk_text_buffer_get_modified (buffer);
+  gb_tab_set_dirty (GB_TAB (tab), modified);
+
+  /* notify helper for tab labels wanting to render dirty tabs specially */
+  g_object_notify (G_OBJECT (tab), "title");
+}
+
+static void
 gb_editor_tab_constructed (GObject *object)
 {
   GbEditorTabPrivate *priv;
@@ -453,6 +468,12 @@ gb_editor_tab_constructed (GObject *object)
   priv->document = g_object_new (GB_TYPE_EDITOR_DOCUMENT,
                                  NULL);
   gb_editor_frame_set_document (priv->frame, priv->document);
+
+  g_signal_connect_object (priv->document,
+                           "modified-changed",
+                           G_CALLBACK (gb_editor_tab_on_modified_changed),
+                           tab,
+                           G_CONNECT_SWAPPED);
 
   file = gb_editor_document_get_file (priv->document);
   g_signal_connect_object (file,
