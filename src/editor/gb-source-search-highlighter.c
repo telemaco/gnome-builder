@@ -261,7 +261,7 @@ gb_source_search_highlighter_set_search_context (GbSourceSearchHighlighter *high
   GbSourceSearchHighlighterPrivate *priv;
 
   g_return_if_fail (GB_IS_SOURCE_SEARCH_HIGHLIGHTER (highlighter));
-  g_return_if_fail (GTK_SOURCE_IS_SEARCH_CONTEXT (search_context));
+  g_return_if_fail (!search_context || GTK_SOURCE_IS_SEARCH_CONTEXT (search_context));
 
   priv = highlighter->priv;
 

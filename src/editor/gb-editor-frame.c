@@ -287,18 +287,14 @@ gb_editor_frame_connect (GbEditorFrame    *frame,
   /*
    * Create search defaults for this frame.
    */
-  priv->search_settings = g_object_new (GTK_SOURCE_TYPE_SEARCH_SETTINGS,
-                                        NULL);
   priv->search_context = g_object_new (GTK_SOURCE_TYPE_SEARCH_CONTEXT,
                                        "buffer", priv->document,
                                        "settings", priv->search_settings,
                                        "highlight", TRUE,
                                        NULL);
-  priv->search_highlighter =
-    g_object_new (GB_TYPE_SOURCE_SEARCH_HIGHLIGHTER,
-                  "search-context", priv->search_context,
-                  "search-settings", priv->search_settings,
-                  NULL);
+  g_object_set (priv->search_highlighter,
+                "search-context", priv->search_context,
+                NULL);
 
   /*
    * Connect to cursor-moved signal to update cursor position label.
@@ -345,10 +341,12 @@ gb_editor_frame_disconnect (GbEditorFrame *frame)
                 "code-assistant", NULL,
                 NULL);
 
+  g_object_set (priv->search_highlighter,
+                "search-context", NULL,
+                NULL);
+
   g_clear_object (&priv->document);
-  g_clear_object (&priv->search_settings);
   g_clear_object (&priv->search_context);
-  g_clear_object (&priv->search_highlighter);
 
   EXIT;
 }
@@ -432,11 +430,11 @@ gb_editor_frame_on_populate_popup (GbEditorFrame *frame,
  * Update snippet context with the filename of the current document.
  */
 static void
-gb_editor_frame_on_push_snippet (GbSourceView           *source_view,
+gb_editor_frame_on_push_snippet (GbEditorFrame          *frame,
                                  GbSourceSnippet        *snippet,
                                  GbSourceSnippetContext *context,
                                  GtkTextIter            *iter,
-                                 GbEditorFrame          *frame)
+                                 GbSourceView           *source_view)
 {
   GtkSourceFile *source_file;
   GFile *file;
@@ -459,6 +457,36 @@ gb_editor_frame_on_push_snippet (GbSourceView           *source_view,
       gb_source_snippet_context_add_variable (context, "filename", name);
       g_free (name);
     }
+}
+
+static gboolean
+gb_editor_frame_on_search_entry_key_press (GbEditorFrame *frame,
+                                           GdkEventKey   *event,
+                                           GdTaggedEntry *entry)
+{
+  g_assert (GD_IS_TAGGED_ENTRY (entry));
+  g_assert (GB_IS_EDITOR_FRAME (frame));
+
+  if (event->keyval == GDK_KEY_Escape)
+    {
+      gtk_revealer_set_reveal_child (frame->priv->search_revealer, FALSE);
+      gb_source_view_set_show_shadow (frame->priv->source_view, FALSE);
+      gtk_widget_grab_focus (GTK_WIDGET (frame->priv->source_view));
+      return GDK_EVENT_STOP;
+    }
+
+  return GDK_EVENT_PROPAGATE;
+}
+
+static void
+gb_editor_frame_on_search_entry_activate (GbEditorFrame *frame,
+                                          GdTaggedEntry *entry)
+{
+  g_assert (GD_IS_TAGGED_ENTRY (entry));
+  g_assert (GB_IS_EDITOR_FRAME (frame));
+
+  gb_editor_frame_move_next_match (frame);
+  gtk_widget_grab_focus (GTK_WIDGET (frame->priv->source_view));
 }
 
 /**
@@ -581,8 +609,10 @@ gb_editor_frame_finalize (GObject *object)
 
   gb_editor_frame_disconnect (frame);
 
-  g_clear_object (&frame->priv->diff_renderer);
   g_clear_object (&frame->priv->code_assistant_renderer);
+  g_clear_object (&frame->priv->diff_renderer);
+  g_clear_object (&frame->priv->search_settings);
+  g_clear_object (&frame->priv->search_highlighter);
 
   G_OBJECT_CLASS (gb_editor_frame_parent_class)->finalize (object);
 }
@@ -625,6 +655,20 @@ gb_editor_frame_constructed (GObject *object)
                             GTK_SOURCE_GUTTER_RENDERER (priv->code_assistant_renderer),
                             -50);
 
+  priv->search_settings = g_object_new (GTK_SOURCE_TYPE_SEARCH_SETTINGS,
+                                        NULL);
+  g_object_bind_property (priv->search_entry, "text",
+                          priv->search_settings, "search-text",
+                          G_BINDING_SYNC_CREATE);
+
+  priv->search_highlighter =
+    g_object_new (GB_TYPE_SOURCE_SEARCH_HIGHLIGHTER,
+                  "search-settings", priv->search_settings,
+                  NULL);
+  g_object_bind_property (priv->search_revealer, "reveal-child",
+                          priv->source_view, "show-shadow",
+                          G_BINDING_SYNC_CREATE);
+
   g_signal_connect_object (priv->source_view,
                            "focus-in-event",
                            G_CALLBACK (gb_editor_frame_on_focus_in_event),
@@ -652,6 +696,18 @@ gb_editor_frame_constructed (GObject *object)
   g_signal_connect_object (priv->source_view,
                            "query-tooltip",
                            G_CALLBACK (gb_editor_frame_on_query_tooltip),
+                           frame,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (priv->search_entry,
+                           "key-press-event",
+                           G_CALLBACK (gb_editor_frame_on_search_entry_key_press),
+                           frame,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (priv->search_entry,
+                           "activate",
+                           G_CALLBACK (gb_editor_frame_on_search_entry_activate),
                            frame,
                            G_CONNECT_SWAPPED);
 }
