@@ -102,6 +102,19 @@ scroll_down_tab (GSimpleAction *action,
 }
 
 static void
+close_tab (GSimpleAction *action,
+           GVariant      *parameter,
+           gpointer       user_data)
+{
+  GbEditorWorkspace *workspace = user_data;
+  GbTab *tab;
+
+  tab = gb_tab_grid_get_active (workspace->priv->tab_grid);
+  if (GB_IS_TAB (tab))
+    gb_tab_close (GB_TAB (tab));
+}
+
+static void
 new_tab (GSimpleAction *action,
          GVariant      *parameter,
          gpointer       user_data)
@@ -171,6 +184,7 @@ static void
 gb_editor_workspace_init (GbEditorWorkspace *workspace)
 {
     const GActionEntry entries[] = {
+      { "close-tab", close_tab },
       { "new-tab", new_tab },
       { "save", save_tab },
       { "save-as", save_as_tab },
