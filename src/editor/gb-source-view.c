@@ -1700,6 +1700,8 @@ gb_source_view_focus_in_event (GtkWidget     *widget,
   completion = gtk_source_view_get_completion (GTK_SOURCE_VIEW (widget));
   gtk_source_completion_unblock_interactive (completion);
 
+  gb_source_view_scroll_to_insert (GB_SOURCE_VIEW (widget));
+
   return ret;
 }
 
