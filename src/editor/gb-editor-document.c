@@ -375,6 +375,7 @@ gb_editor_document_save_cb (GObject      *object,
                             gpointer      user_data)
 {
   GtkSourceFileSaver *saver = (GtkSourceFileSaver *)object;
+  GbEditorDocument *document;
   GError *error = NULL;
   GTask *task = user_data;
 
@@ -389,6 +390,16 @@ gb_editor_document_save_cb (GObject      *object,
       g_task_return_error (task, error);
       GOTO (cleanup);
     }
+
+  /*
+   * FIXME:
+   *
+   *   Technically this can race. We need to either disable the editing
+   *   for the buffer during the process or keep a sequence number to
+   *   ensure it hasn't changed since we started the request to save.
+   */
+  document = g_task_get_source_object (task);
+  gtk_text_buffer_set_modified (GTK_TEXT_BUFFER (document), FALSE);
 
   g_task_return_boolean (task, TRUE);
 
