@@ -25,6 +25,7 @@
 #include "gb-editor-document.h"
 #include "gb-log.h"
 #include "gb-source-code-assistant.h"
+#include "gb-string.h"
 #include "gca-diagnostics.h"
 #include "gca-service.h"
 #include "gca-structs.h"
@@ -394,6 +395,9 @@ gb_source_code_assistant_do_parse (gpointer data)
 
   if (gfile)
     path = g_file_get_path (gfile);
+
+  if (gb_str_empty0 (path))
+    RETURN (G_SOURCE_REMOVE);
 
   if (!priv->tmpfile_path)
     {
