@@ -474,6 +474,8 @@ gb_editor_frame_on_begin_search (GbEditorFrame    *frame,
 {
   GbEditorFramePrivate *priv;
 
+  ENTRY;
+
   g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
   g_return_if_fail (GB_IS_SOURCE_VIEW (source_view));
 
@@ -502,6 +504,8 @@ gb_editor_frame_on_begin_search (GbEditorFrame    *frame,
       len = g_utf8_strlen (text, -1);
       gtk_editable_select_region (GTK_EDITABLE (priv->search_entry), 0, len);
     }
+
+  EXIT;
 }
 
 static gboolean
