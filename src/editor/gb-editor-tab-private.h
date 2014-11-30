@@ -42,6 +42,8 @@ struct _GbEditorTabPrivate
 
   /* Objects owned by GbEditorTab */
   GbEditorDocument *document;
+
+  guint             unsaved_id;
 };
 
 GbEditorFrame *gb_editor_tab_get_last_frame (GbEditorTab *tab);

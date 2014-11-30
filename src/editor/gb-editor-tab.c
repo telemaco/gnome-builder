@@ -20,6 +20,7 @@
 
 #include <glib/gi18n.h>
 
+#include "gb-doc-seq.h"
 #include "gb-editor-frame-private.h"
 #include "gb-editor-tab.h"
 #include "gb-editor-tab-private.h"
@@ -333,20 +334,51 @@ gb_editor_tab_grab_focus (GtkWidget *widget)
 }
 
 static void
+gb_editor_tab_update_title (GbEditorTab *tab)
+{
+  GtkSourceFile *file;
+  GFile *location;
+  gchar *title;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  file = gb_editor_document_get_file (tab->priv->document);
+  location = gtk_source_file_get_location (file);
+
+  if (location)
+    {
+      if (tab->priv->unsaved_id)
+        {
+          gb_doc_seq_release (tab->priv->unsaved_id);
+          tab->priv->unsaved_id = 0;
+        }
+
+      title = g_file_get_basename (location);
+      gb_tab_set_title (GB_TAB (tab), title);
+      g_free (title);
+    }
+  else
+    {
+      if (!tab->priv->unsaved_id)
+        {
+          tab->priv->unsaved_id = gb_doc_seq_acquire ();
+          title = g_strdup_printf (_("unsaved %u"), tab->priv->unsaved_id);
+          gb_tab_set_title (GB_TAB (tab), title);
+          g_free (title);
+        }
+    }
+}
+
+static void
 gb_editor_tab_on_notify_location (GbEditorTab   *tab,
                                   GParamSpec    *pspec,
                                   GtkSourceFile *file)
 {
-  gchar *title;
-  GFile *location;
 
   g_return_if_fail (GB_IS_EDITOR_TAB (tab));
   g_return_if_fail (GTK_SOURCE_IS_FILE (file));
 
-  location = gtk_source_file_get_location (file);
-  title = g_file_get_basename (location);
-  gb_tab_set_title (GB_TAB (tab), title);
-  g_free (title);
+  gb_editor_tab_update_title (tab);
 }
 
 static void
@@ -384,6 +416,8 @@ gb_editor_tab_constructed (GObject *object)
                            G_CALLBACK (gb_editor_tab_on_split_toggled),
                            tab,
                            G_CONNECT_SWAPPED);
+
+  gb_editor_tab_update_title (tab);
 }
 
 static void
@@ -413,6 +447,14 @@ gb_editor_tab_dispose (GObject *object)
 static void
 gb_editor_tab_finalize (GObject *object)
 {
+  GbEditorTabPrivate *priv = GB_EDITOR_TAB (object)->priv;
+
+  if (priv->unsaved_id)
+    {
+      gb_doc_seq_release (priv->unsaved_id);
+      priv->unsaved_id = 0;
+    }
+
   G_OBJECT_CLASS (gb_editor_tab_parent_class)->finalize (object);
 }
 
