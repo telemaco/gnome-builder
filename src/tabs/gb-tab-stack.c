@@ -26,13 +26,12 @@
 
 struct _GbTabStackPrivate
 {
-  GtkButton    *close;
-  GtkComboBox  *combo;
-  GtkStack     *controls;
-  GtkButton    *move_left;
-  GtkButton    *move_right;
-  GtkStack     *stack;
-  GtkListStore *store;
+  GtkButton     *close;
+  GtkComboBox   *combo;
+  GtkStack      *controls;
+  GtkMenuButton *stack_menu;
+  GtkStack      *stack;
+  GtkListStore  *store;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbTabStack, gb_tab_stack, GTK_TYPE_BOX)
@@ -460,18 +459,6 @@ gb_tab_stack_grab_focus (GtkWidget *widget)
     gtk_widget_grab_focus (child);
 }
 
-static void
-gb_tab_stack_real_changed (GbTabStack *stack)
-{
-  gboolean sensitive;
-
-  g_return_if_fail (GB_IS_TAB_STACK (stack));
-
-  sensitive = !!gtk_stack_get_visible_child (stack->priv->stack);
-  gtk_widget_set_sensitive (GTK_WIDGET (stack->priv->move_left), sensitive);
-  gtk_widget_set_sensitive (GTK_WIDGET (stack->priv->move_right), sensitive);
-}
-
 static GbTabGrid *
 get_grid (GbTabStack *stack)
 {
@@ -483,40 +470,6 @@ get_grid (GbTabStack *stack)
     widget = gtk_widget_get_parent (widget);
 
   return (GbTabGrid *)widget;
-}
-
-static void
-gb_tab_stack_do_move_left (GbTabStack *stack,
-                           GdkEvent   *event,
-                           GtkButton  *button)
-{
-  GbTabGrid *grid;
-  GbTab *tab;
-
-  g_return_if_fail (GB_IS_TAB_STACK (stack));
-
-  grid = get_grid (stack);
-  tab = gb_tab_stack_get_active (stack);
-
-  if (grid && tab)
-    gb_tab_grid_move_tab_left (grid, tab);
-}
-
-static void
-gb_tab_stack_do_move_right (GbTabStack *stack,
-                            GdkEvent   *event,
-                            GtkButton  *button)
-{
-  GbTabGrid *grid;
-  GbTab *tab;
-
-  g_return_if_fail (GB_IS_TAB_STACK (stack));
-
-  grid = get_grid (stack);
-  tab = gb_tab_stack_get_active (stack);
-
-  if (grid && tab)
-    gb_tab_grid_move_tab_right (grid, tab);
 }
 
 static void
@@ -546,16 +499,13 @@ gb_tab_stack_class_init (GbTabStackClass *klass)
 
   widget_class->grab_focus = gb_tab_stack_grab_focus;
 
-  klass->changed = gb_tab_stack_real_changed;
-
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-tab-stack.ui");
   gtk_widget_class_bind_template_child_internal_private (widget_class, GbTabStack, controls);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, close);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, combo);
-  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, move_left);
-  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, move_right);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, stack);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, stack_menu);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, store);
 
   gSignals [CHANGED] = g_signal_new ("changed",
@@ -576,6 +526,8 @@ gb_tab_stack_init (GbTabStack *stack)
 {
   GtkCellLayout *layout;
   GtkCellRenderer *cell;
+  GApplication *app;
+  GMenu *menu;
 
   stack->priv = gb_tab_stack_get_instance_private (stack);
 
@@ -587,18 +539,6 @@ gb_tab_stack_init (GbTabStack *stack)
   g_signal_connect_object (stack->priv->combo,
                            "changed",
                            G_CALLBACK (gb_tab_stack_combobox_changed),
-                           stack,
-                           G_CONNECT_SWAPPED);
-
-  g_signal_connect_object (stack->priv->move_left,
-                           "clicked",
-                           G_CALLBACK (gb_tab_stack_do_move_left),
-                           stack,
-                           G_CONNECT_SWAPPED);
-
-  g_signal_connect_object (stack->priv->move_right,
-                           "clicked",
-                           G_CALLBACK (gb_tab_stack_do_move_right),
                            stack,
                            G_CONNECT_SWAPPED);
 
@@ -616,4 +556,8 @@ gb_tab_stack_init (GbTabStack *stack)
                                       NULL, NULL);
   gtk_cell_renderer_text_set_fixed_height_from_font (
       GTK_CELL_RENDERER_TEXT (cell), 1);
+
+  app = g_application_get_default ();
+  menu = gtk_application_get_menu_by_id (GTK_APPLICATION (app), "stack-menu");
+  gtk_menu_button_set_menu_model (stack->priv->stack_menu, G_MENU_MODEL (menu));
 }
