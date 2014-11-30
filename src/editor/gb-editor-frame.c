@@ -23,6 +23,8 @@
 #include "gb-editor-frame.h"
 #include "gb-editor-frame-private.h"
 #include "gb-log.h"
+#include "gb-widget.h"
+#include "gb-workbench.h"
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorFrame, gb_editor_frame, GTK_TYPE_OVERLAY)
 
@@ -600,6 +602,35 @@ cleanup:
 }
 
 static void
+gb_editor_frame_on_command_toggled (GbEditorFrame *frame,
+                                    gboolean       visible,
+                                    GbSourceVim   *vim)
+{
+  GbWorkbench *workbench;
+  GAction *action;
+  GVariant *params;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+  g_return_if_fail (GB_IS_SOURCE_VIM (vim));
+
+  workbench = gb_widget_get_workbench (GTK_WIDGET (frame));
+  if (!workbench)
+    return;
+
+  action = g_action_map_lookup_action (G_ACTION_MAP (workbench),
+                                       "toggle-command-bar");
+  if (!action)
+    return;
+
+  params = g_variant_new_boolean (visible);
+  g_action_activate (action, params);
+
+  EXIT;
+}
+
+static void
 gb_editor_frame_grab_focus (GtkWidget *widget)
 {
   GbEditorFrame *frame = (GbEditorFrame *)widget;
@@ -631,6 +662,7 @@ gb_editor_frame_constructed (GObject *object)
   GbEditorFramePrivate *priv = GB_EDITOR_FRAME (object)->priv;
   GtkSourceGutter *gutter;
   GbEditorFrame *frame = GB_EDITOR_FRAME (object);
+  GbSourceVim *vim;
 
   G_OBJECT_CLASS (gb_editor_frame_parent_class)->constructed (object);
 
@@ -678,6 +710,13 @@ gb_editor_frame_constructed (GObject *object)
   g_object_bind_property (priv->search_revealer, "reveal-child",
                           priv->source_view, "show-shadow",
                           G_BINDING_SYNC_CREATE);
+
+  vim = gb_source_view_get_vim (priv->source_view);
+  g_signal_connect_object (vim,
+                           "command-visibility-toggled",
+                           G_CALLBACK (gb_editor_frame_on_command_toggled),
+                           frame,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (priv->source_view,
                            "focus-in-event",
