@@ -118,6 +118,7 @@ gb_editor_tab_do_save (GbEditorTab *tab)
 void
 gb_editor_tab_save_as (GbEditorTab *tab)
 {
+  const gchar *title;
   GtkWidget *toplevel;
   GtkDialog *dialog;
   GtkWidget *suggested;
@@ -138,6 +139,9 @@ gb_editor_tab_save_as (GbEditorTab *tab)
                          "transient-for", toplevel,
                          "title", _("Save Document As"),
                          NULL);
+
+  title = gb_tab_get_title (GB_TAB (tab));
+  gtk_file_chooser_set_current_name (GTK_FILE_CHOOSER (dialog), title);
 
   gtk_dialog_add_buttons (GTK_DIALOG (dialog),
                           _("Cancel"), GTK_RESPONSE_CANCEL,
