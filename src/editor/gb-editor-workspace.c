@@ -64,6 +64,7 @@ new_tab (GSimpleAction *action,
                       NULL);
   gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
                      GTK_WIDGET (tab));
+  gtk_widget_grab_focus (GTK_WIDGET (tab));
 }
 
 static GActionGroup *

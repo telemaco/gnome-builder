@@ -63,7 +63,13 @@ enum {
   LAST_PROP
 };
 
+enum {
+  FOCUSED,
+  LAST_SIGNAL
+};
+
 static GParamSpec *gParamSpecs [LAST_PROP];
+static guint       gSignals [FOCUSED];
 
 GtkWidget *
 gb_editor_frame_new (void)
@@ -403,6 +409,8 @@ gb_editor_frame_on_focus_in_event (GbEditorFrame *frame,
 
   gtk_revealer_set_reveal_child (frame->priv->search_revealer, FALSE);
   gtk_source_search_context_set_highlight (frame->priv->search_context, FALSE);
+
+  g_signal_emit (frame, gSignals [FOCUSED], 0);
 
   return GDK_EVENT_PROPAGATE;
 }
@@ -816,6 +824,17 @@ gb_editor_frame_class_init (GbEditorFrameClass *klass)
                          (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (object_class, PROP_DOCUMENT,
                                    gParamSpecs [PROP_DOCUMENT]);
+
+  gSignals [FOCUSED] =
+    g_signal_new ("focused",
+                  GB_TYPE_EDITOR_FRAME,
+                  G_SIGNAL_RUN_LAST,
+                  0,
+                  NULL,
+                  NULL,
+                  g_cclosure_marshal_VOID__VOID,
+                  G_TYPE_NONE,
+                  0);
 
   gtk_widget_class_set_template_from_resource (widget_class,
                                                "/org/gnome/builder/ui/gb-editor-frame.ui");

@@ -24,10 +24,15 @@
 
 struct _GbEditorTabPrivate
 {
+  /* Widgets owned by GtkBuilder */
   GbEditorFrame    *frame;
   GtkPaned         *paned;
   GtkToggleButton  *split_button;
 
+  /* Weak references */
+  GbEditorFrame    *last_frame;
+
+  /* Objects owned by GbEditorTab */
   GbEditorDocument *document;
 };
 
@@ -40,6 +45,32 @@ enum
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorTab, gb_editor_tab, GB_TYPE_TAB)
 
 static GParamSpec *gParamSpecs [LAST_PROP];
+
+static void
+gb_editor_tab_on_frame_focused (GbEditorTab   *tab,
+                                GbEditorFrame *frame)
+{
+  GbEditorTabPrivate *priv;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+
+  priv = tab->priv;
+
+  if (priv->last_frame)
+    {
+      g_object_remove_weak_pointer (G_OBJECT (priv->last_frame),
+                                    (gpointer *)&priv->last_frame);
+      priv->last_frame = NULL;
+    }
+
+  if (frame)
+    {
+      priv->last_frame = frame;
+      g_object_add_weak_pointer (G_OBJECT (priv->last_frame),
+                                  (gpointer *)&priv->last_frame);
+    }
+}
 
 static void
 gb_editor_tab_on_split_toggled (GbEditorTab     *tab,
@@ -69,6 +100,12 @@ gb_editor_tab_on_split_toggled (GbEditorTab     *tab,
                                "resize", TRUE,
                                "shrink", FALSE,
                                NULL);
+      g_signal_connect_object (child2,
+                               "focused",
+                               G_CALLBACK (gb_editor_tab_on_frame_focused),
+                               tab,
+                               G_CONNECT_SWAPPED);
+      gtk_widget_grab_focus (child2);
     }
 }
 
@@ -77,7 +114,8 @@ gb_editor_tab_get_last_frame (GbEditorTab *tab)
 {
   g_return_val_if_fail (GB_IS_EDITOR_TAB (tab), NULL);
 
-  /* TODO: track the frame */
+  if (tab->priv->last_frame)
+    return tab->priv->last_frame;
 
   return tab->priv->frame;
 }
@@ -109,6 +147,12 @@ gb_editor_tab_constructed (GObject *object)
   priv->document = g_object_new (GB_TYPE_EDITOR_DOCUMENT,
                                  NULL);
   gb_editor_frame_set_document (priv->frame, priv->document);
+
+  g_signal_connect_object (priv->frame,
+                           "focused",
+                           G_CALLBACK (gb_editor_tab_on_frame_focused),
+                           tab,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (priv->split_button,
                            "toggled",
