@@ -332,6 +332,84 @@ gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
 }
 
 static void
+gb_editor_document_save_cb (GObject      *object,
+                            GAsyncResult *result,
+                            gpointer      user_data)
+{
+  GtkSourceFileSaver *saver = (GtkSourceFileSaver *)object;
+  GError *error = NULL;
+  GTask *task = user_data;
+
+  ENTRY;
+
+  g_return_if_fail (GTK_SOURCE_IS_FILE_SAVER (saver));
+  g_return_if_fail (G_IS_ASYNC_RESULT (result));
+  g_return_if_fail (G_IS_TASK (task));
+
+  if (!gtk_source_file_saver_save_finish (saver, result, &error))
+    {
+      g_task_return_error (task, error);
+      GOTO (cleanup);
+    }
+
+  g_task_return_boolean (task, TRUE);
+
+cleanup:
+  g_object_unref (task);
+
+  EXIT;
+}
+
+void
+gb_editor_document_save_async (GbEditorDocument      *document,
+                               GCancellable          *cancellable,
+                               GFileProgressCallback  progress_callback,
+                               gpointer               progress_data,
+                               GDestroyNotify         progress_data_notify,
+                               GAsyncReadyCallback    callback,
+                               gpointer               user_data)
+{
+  GtkSourceFileSaver *saver;
+  GTask *task;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+  g_return_if_fail (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  task = g_task_new (document, cancellable, callback, user_data);
+
+  saver = gtk_source_file_saver_new (GTK_SOURCE_BUFFER (document),
+                                     document->priv->file);
+
+  gtk_source_file_saver_save_async (saver,
+                                    G_PRIORITY_DEFAULT,
+                                    cancellable,
+                                    progress_callback,
+                                    progress_data,
+                                    progress_data_notify,
+                                    gb_editor_document_save_cb,
+                                    task);
+
+  g_object_unref (saver);
+
+  EXIT;
+}
+
+gboolean
+gb_editor_document_save_finish (GbEditorDocument  *document,
+                                GAsyncResult      *result,
+                                GError           **error)
+{
+  GTask *task = (GTask *)result;
+
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), FALSE);
+  g_return_val_if_fail (G_IS_TASK (task), FALSE);
+
+  return g_task_propagate_boolean (task, error);
+}
+
+static void
 gb_editor_document_finalize (GObject *object)
 {
   GbEditorDocumentPrivate *priv = GB_EDITOR_DOCUMENT (object)->priv;

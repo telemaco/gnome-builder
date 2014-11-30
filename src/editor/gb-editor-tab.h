@@ -19,6 +19,7 @@
 #ifndef GB_EDITOR_TAB_H
 #define GB_EDITOR_TAB_H
 
+#include <gio/gio.h>
 #include <gtk/gtk.h>
 
 #include "gb-tab.h"
@@ -51,6 +52,9 @@ struct _GbEditorTabClass
 };
 
 GType gb_editor_tab_get_type (void) G_GNUC_CONST;
+void  gb_editor_tab_save     (GbEditorTab *tab);
+void  gb_editor_tab_save_as  (GbEditorTab *tab);
+void  gb_editor_tab_open     (GbEditorTab *tab);
 
 G_END_DECLS
 

@@ -55,11 +55,21 @@ struct _GbEditorDocumentClass
 
 GbEditorDocument      *gb_editor_document_new                (void);
 GType                  gb_editor_document_get_type           (void) G_GNUC_CONST;
-GtkSourceFile         *gb_editor_document_get_file           (GbEditorDocument *document);
-void                   gb_editor_document_set_file           (GbEditorDocument *document,
-                                                              GtkSourceFile    *file);
-GbSourceChangeMonitor *gb_editor_document_get_change_monitor (GbEditorDocument *document);
-GbSourceCodeAssistant *gb_editor_document_get_code_assistant (GbEditorDocument *document);
+GtkSourceFile         *gb_editor_document_get_file           (GbEditorDocument       *document);
+void                   gb_editor_document_set_file           (GbEditorDocument       *document,
+                                                              GtkSourceFile          *file);
+GbSourceChangeMonitor *gb_editor_document_get_change_monitor (GbEditorDocument       *document);
+GbSourceCodeAssistant *gb_editor_document_get_code_assistant (GbEditorDocument       *document);
+void                   gb_editor_document_save_async         (GbEditorDocument       *document,
+                                                              GCancellable           *cancellable,
+                                                              GFileProgressCallback   progress_callback,
+                                                              gpointer                progress_data,
+                                                              GDestroyNotify          progress_data_notify,
+                                                              GAsyncReadyCallback     callback,
+                                                              gpointer                user_data);
+gboolean               gb_editor_document_save_finish        (GbEditorDocument       *document,
+                                                              GAsyncResult           *result,
+                                                              GError                **error);
 
 G_END_DECLS
 
