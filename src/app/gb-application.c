@@ -349,50 +349,6 @@ gb_application_activate (GApplication *application)
   GbWorkbench *workbench;
   GList *list;
 
-  {
-    GbEditorDocument *document;
-    GtkSourceLanguage *language;
-    GtkSourceFile *file;
-    GFile *gfile;
-    GtkWindow *window;
-    GtkWidget *frame;
-    GtkPaned *paned;
-
-    file = gtk_source_file_new ();
-    gfile = g_file_new_for_path ("src/app/gb-application.c");
-    gtk_source_file_set_location (file, gfile);
-    g_object_unref (gfile);
-
-    language = gtk_source_language_manager_get_language (
-      gtk_source_language_manager_get_default (), "c");
-    document = g_object_new (GB_TYPE_EDITOR_DOCUMENT,
-                             "file", file,
-                             "language", language,
-                             NULL);
-    g_object_unref (file);
-
-    window = g_object_new (GTK_TYPE_WINDOW,
-                           NULL);
-    paned = g_object_new (GTK_TYPE_PANED,
-                          "orientation", GTK_ORIENTATION_VERTICAL,
-                          "visible", TRUE,
-                          NULL);
-    gtk_container_add (GTK_CONTAINER (window), GTK_WIDGET (paned));
-    frame = g_object_new (GB_TYPE_EDITOR_FRAME,
-                          "document", document,
-                          "visible", TRUE,
-                          NULL);
-    gtk_container_add (GTK_CONTAINER (paned), GTK_WIDGET (frame));
-    frame = g_object_new (GB_TYPE_EDITOR_FRAME,
-                          "document", document,
-                          "visible", TRUE,
-                          NULL);
-    gtk_container_add (GTK_CONTAINER (paned), GTK_WIDGET (frame));
-    gtk_window_maximize (window);
-    g_object_unref (document);
-    gtk_window_present (window);
-  }
-
   g_return_if_fail (GB_IS_APPLICATION (application));
 
   list = gtk_application_get_windows (GTK_APPLICATION (application));
