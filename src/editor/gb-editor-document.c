@@ -669,6 +669,10 @@ gb_editor_document_init (GbEditorDocument *document)
   document->priv->change_monitor = gb_source_change_monitor_new (GTK_TEXT_BUFFER (document));
   document->priv->code_assistant = gb_source_code_assistant_new (GTK_TEXT_BUFFER (document));
 
+  g_object_bind_property (document->priv->file, "location",
+                          document->priv->change_monitor, "file",
+                          G_BINDING_SYNC_CREATE);
+
   g_signal_connect_object (document->priv->code_assistant,
                            "changed",
                            G_CALLBACK (gb_editor_document_code_assistant_changed),
