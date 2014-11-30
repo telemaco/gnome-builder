@@ -332,6 +332,44 @@ gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
 }
 
 static void
+gb_editor_document_guess_language (GbEditorDocument *document)
+{
+  GtkSourceLanguageManager *manager;
+  GtkSourceLanguage *lang;
+  GtkTextIter begin;
+  GtkTextIter end;
+  gboolean result_uncertain = TRUE;
+  GFile *location;
+  gchar *name = NULL;
+  gchar *text = NULL;
+  gchar *content_type = NULL;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+
+  location = gtk_source_file_get_location (document->priv->file);
+  if (location)
+    name = g_file_get_basename (location);
+
+  gtk_text_buffer_get_bounds (GTK_TEXT_BUFFER (document), &begin, &end);
+  text = gtk_text_iter_get_slice (&begin, &end);
+
+  content_type = g_content_type_guess (name,
+                                       (const guint8 *)text, strlen (text),
+                                       &result_uncertain);
+  if (result_uncertain)
+    g_clear_pointer (&content_type, g_free);
+
+  manager = gtk_source_language_manager_get_default ();
+  lang = gtk_source_language_manager_guess_language (manager, name, content_type);
+
+  gtk_source_buffer_set_language (GTK_SOURCE_BUFFER (document), lang);
+
+  g_free (content_type);
+  g_free (name);
+  g_free (text);
+}
+
+static void
 gb_editor_document_save_cb (GObject      *object,
                             GAsyncResult *result,
                             gpointer      user_data)
@@ -398,6 +436,92 @@ gb_editor_document_save_async (GbEditorDocument      *document,
 
 gboolean
 gb_editor_document_save_finish (GbEditorDocument  *document,
+                                GAsyncResult      *result,
+                                GError           **error)
+{
+  GTask *task = (GTask *)result;
+
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), FALSE);
+  g_return_val_if_fail (G_IS_TASK (task), FALSE);
+
+  return g_task_propagate_boolean (task, error);
+}
+
+static void
+gb_editor_document_load_cb (GObject      *object,
+                            GAsyncResult *result,
+                            gpointer      user_data)
+{
+  GtkSourceFileLoader *loader = (GtkSourceFileLoader *)object;
+  GbEditorDocument *document;
+  GError *error = NULL;
+  GTask *task = user_data;
+
+  ENTRY;
+
+  g_return_if_fail (GTK_SOURCE_IS_FILE_LOADER (loader));
+  g_return_if_fail (G_IS_ASYNC_RESULT (result));
+  g_return_if_fail (G_IS_TASK (task));
+
+  if (!gtk_source_file_loader_load_finish (loader, result, &error))
+    {
+      g_task_return_error (task, error);
+      GOTO (cleanup);
+    }
+
+  document = g_task_get_source_object (task);
+  gb_editor_document_guess_language (document);
+
+  g_task_return_boolean (task, TRUE);
+
+cleanup:
+  g_object_unref (task);
+
+  EXIT;
+}
+
+void
+gb_editor_document_load_async (GbEditorDocument      *document,
+                               GFile                 *file,
+                               GCancellable          *cancellable,
+                               GFileProgressCallback  progress_callback,
+                               gpointer               progress_data,
+                               GDestroyNotify         progress_data_notify,
+                               GAsyncReadyCallback    callback,
+                               gpointer               user_data)
+{
+  GtkSourceFileLoader *loader;
+  GTask *task;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+  g_return_if_fail (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  if (file)
+    gtk_source_file_set_location (document->priv->file, file);
+
+  task = g_task_new (document, cancellable, callback, user_data);
+
+  loader = gtk_source_file_loader_new (GTK_SOURCE_BUFFER (document),
+                                       document->priv->file);
+
+  gtk_source_file_loader_load_async (loader,
+                                     G_PRIORITY_DEFAULT,
+                                     cancellable,
+                                     progress_callback,
+                                     progress_data,
+                                     progress_data_notify,
+                                     gb_editor_document_load_cb,
+                                     task);
+
+  g_object_unref (loader);
+
+  EXIT;
+}
+
+gboolean
+gb_editor_document_load_finish (GbEditorDocument  *document,
                                 GAsyncResult      *result,
                                 GError           **error)
 {

@@ -60,6 +60,17 @@ void                   gb_editor_document_set_file           (GbEditorDocument  
                                                               GtkSourceFile          *file);
 GbSourceChangeMonitor *gb_editor_document_get_change_monitor (GbEditorDocument       *document);
 GbSourceCodeAssistant *gb_editor_document_get_code_assistant (GbEditorDocument       *document);
+void                   gb_editor_document_load_async         (GbEditorDocument       *document,
+                                                              GFile                  *file,
+                                                              GCancellable           *cancellable,
+                                                              GFileProgressCallback   progress_callback,
+                                                              gpointer                progress_data,
+                                                              GDestroyNotify          progress_data_notify,
+                                                              GAsyncReadyCallback     callback,
+                                                              gpointer                user_data);
+gboolean               gb_editor_document_load_finish        (GbEditorDocument       *document,
+                                                              GAsyncResult           *result,
+                                                              GError                **error);
 void                   gb_editor_document_save_async         (GbEditorDocument       *document,
                                                               GCancellable           *cancellable,
                                                               GFileProgressCallback   progress_callback,
