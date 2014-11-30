@@ -356,6 +356,7 @@ gb_application_activate (GApplication *application)
     GFile *gfile;
     GtkWindow *window;
     GtkWidget *frame;
+    GtkPaned *paned;
 
     file = gtk_source_file_new ();
     gfile = g_file_new_for_path ("src/app/gb-application.c");
@@ -370,13 +371,25 @@ gb_application_activate (GApplication *application)
                              NULL);
     g_object_unref (file);
 
-    window = g_object_new (GTK_TYPE_WINDOW, NULL);
+    window = g_object_new (GTK_TYPE_WINDOW,
+                           NULL);
+    paned = g_object_new (GTK_TYPE_PANED,
+                          "orientation", GTK_ORIENTATION_VERTICAL,
+                          "visible", TRUE,
+                          NULL);
+    gtk_container_add (GTK_CONTAINER (window), GTK_WIDGET (paned));
     frame = g_object_new (GB_TYPE_EDITOR_FRAME,
                           "document", document,
                           "visible", TRUE,
                           NULL);
+    gtk_container_add (GTK_CONTAINER (paned), GTK_WIDGET (frame));
+    frame = g_object_new (GB_TYPE_EDITOR_FRAME,
+                          "document", document,
+                          "visible", TRUE,
+                          NULL);
+    gtk_container_add (GTK_CONTAINER (paned), GTK_WIDGET (frame));
+    gtk_window_maximize (window);
     g_object_unref (document);
-    gtk_container_add (GTK_CONTAINER (window), GTK_WIDGET (frame));
     gtk_window_present (window);
   }
 
