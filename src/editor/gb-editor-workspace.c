@@ -122,12 +122,76 @@ new_tab (GSimpleAction *action,
   GbEditorWorkspace *workspace = user_data;
   GbEditorTab *tab;
 
-  tab = g_object_new (GB_TYPE_EDITOR_TAB,
-                      "visible", TRUE,
-                      NULL);
+  tab = gb_editor_tab_new ();
   gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
                      GTK_WIDGET (tab));
+  gtk_widget_show (GTK_WIDGET (tab));
   gtk_widget_grab_focus (GTK_WIDGET (tab));
+}
+
+static void
+open_tab (GSimpleAction *action,
+          GVariant      *parameter,
+          gpointer       user_data)
+{
+  GbEditorWorkspace *workspace = user_data;
+  GtkFileChooserDialog *dialog;
+  GtkWidget *toplevel;
+  GtkWidget *suggested;
+  GtkResponseType response;
+  GbEditorTab *tab;
+
+  g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
+
+  toplevel = gtk_widget_get_toplevel (GTK_WIDGET (workspace));
+
+  dialog = g_object_new (GTK_TYPE_FILE_CHOOSER_DIALOG,
+                         "action", GTK_FILE_CHOOSER_ACTION_OPEN,
+                         "local-only", FALSE,
+                         "select-multiple", TRUE,
+                         "show-hidden", FALSE,
+                         "transient-for", toplevel,
+                         "title", _("Open Document"),
+                         NULL);
+
+  gtk_dialog_add_buttons (GTK_DIALOG (dialog),
+                          _("Cancel"), GTK_RESPONSE_CANCEL,
+                          _("Open"), GTK_RESPONSE_OK,
+                          NULL);
+
+  gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
+
+  suggested = gtk_dialog_get_widget_for_response (GTK_DIALOG (dialog),
+                                                  GTK_RESPONSE_OK);
+  gtk_style_context_add_class (gtk_widget_get_style_context (suggested),
+                               GTK_STYLE_CLASS_SUGGESTED_ACTION);
+
+  response = gtk_dialog_run (GTK_DIALOG (dialog));
+
+  if (response == GTK_RESPONSE_OK)
+    {
+      GSList *files;
+      GSList *iter;
+
+      files = gtk_file_chooser_get_files (GTK_FILE_CHOOSER (dialog));
+
+      for (iter = files; iter; iter = iter->next)
+        {
+          GFile *file = iter->data;
+
+          tab = gb_editor_tab_new ();
+          gb_editor_tab_open_file (tab, file);
+          gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                             GTK_WIDGET (tab));
+          gtk_widget_show (GTK_WIDGET (tab));
+
+          g_clear_object (&file);
+        }
+
+      g_slist_free (files);
+    }
+
+  gtk_widget_destroy (GTK_WIDGET (dialog));
 }
 
 static GActionGroup *
@@ -186,6 +250,7 @@ gb_editor_workspace_init (GbEditorWorkspace *workspace)
     const GActionEntry entries[] = {
       { "close-tab", close_tab },
       { "new-tab", new_tab },
+      { "open", open_tab },
       { "save", save_tab },
       { "save-as", save_as_tab },
       { "scroll-up", scroll_up_tab },

@@ -29,6 +29,12 @@
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorTab, gb_editor_tab, GB_TYPE_TAB)
 
+GbEditorTab *
+gb_editor_tab_new (void)
+{
+  return g_object_new (GB_TYPE_EDITOR_TAB, NULL);
+}
+
 static void
 gb_editor_tab_progress_cb (goffset  current_num_bytes,
                            goffset  total_num_bytes,
@@ -245,11 +251,6 @@ gb_editor_tab_open_file (GbEditorTab *tab,
                                  g_object_ref (tab));
 
   EXIT;
-}
-
-void
-gb_editor_tab_open (GbEditorTab *tab)
-{
 }
 
 static void

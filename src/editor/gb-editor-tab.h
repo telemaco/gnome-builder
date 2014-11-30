@@ -51,14 +51,14 @@ struct _GbEditorTabClass
   GbTabClass parent_class;
 };
 
-GType gb_editor_tab_get_type    (void) G_GNUC_CONST;
-void  gb_editor_tab_save        (GbEditorTab *tab);
-void  gb_editor_tab_save_as     (GbEditorTab *tab);
-void  gb_editor_tab_open        (GbEditorTab *tab);
-void  gb_editor_tab_open_file   (GbEditorTab *tab,
-                                 GFile       *file);
-void  gb_editor_tab_scroll_up   (GbEditorTab *tab);
-void  gb_editor_tab_scroll_down (GbEditorTab *tab);
+GbEditorTab *gb_editor_tab_new         (void);
+GType        gb_editor_tab_get_type    (void) G_GNUC_CONST;
+void         gb_editor_tab_save        (GbEditorTab *tab);
+void         gb_editor_tab_save_as     (GbEditorTab *tab);
+void         gb_editor_tab_open_file   (GbEditorTab *tab,
+                                        GFile       *file);
+void         gb_editor_tab_scroll_up   (GbEditorTab *tab);
+void         gb_editor_tab_scroll_down (GbEditorTab *tab);
 
 G_END_DECLS
 
