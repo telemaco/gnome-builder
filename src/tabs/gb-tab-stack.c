@@ -425,24 +425,27 @@ gb_tab_stack_combobox_text_func (GtkCellLayout   *cell_layout,
                                  gpointer         data)
 {
   const gchar *title = NULL;
-  gchar *str = NULL;
   GbTab *tab = NULL;
 
   gtk_tree_model_get (tree_model, iter, 0, &tab, -1);
 
   if (GB_IS_TAB (tab))
     title = gb_tab_get_title (tab);
-
   if (!title)
-    {
-      /* TODO: temp tab name */
-      title = _("untitled");
-    }
+    title = _("untitled");
 
-  g_object_set (cell, "text", title, NULL);
+  if (gb_tab_get_dirty (tab))
+    {
+      gchar *str;
+
+      str = g_strdup_printf ("%s •", title);
+      g_object_set (cell, "text", str, NULL);
+      g_free (str);
+    }
+  else
+    g_object_set (cell, "text", title, NULL);
 
   g_clear_object (&tab);
-  g_free (str);
 }
 
 static void
