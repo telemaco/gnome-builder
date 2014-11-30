@@ -665,6 +665,9 @@ gb_editor_frame_constructed (GObject *object)
     g_object_new (GB_TYPE_SOURCE_SEARCH_HIGHLIGHTER,
                   "search-settings", priv->search_settings,
                   NULL);
+  g_object_set (priv->source_view,
+                "search-highlighter", priv->search_highlighter,
+                NULL);
   g_object_bind_property (priv->search_revealer, "reveal-child",
                           priv->source_view, "show-shadow",
                           G_BINDING_SYNC_CREATE);
