@@ -98,6 +98,11 @@
             <property name="show-line-numbers">true</property>
             <property name="show-right-margin">true</property>
             <property name="right-margin-position">80</property>
+            <child internal-child="completion">
+              <object class="GtkSourceCompletion">
+                <property name="show-headers">false</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
