@@ -195,6 +195,58 @@ gb_editor_tab_save (GbEditorTab *tab)
   EXIT;
 }
 
+static void
+gb_editor_tab_open_file_cb (GObject      *source_object,
+                            GAsyncResult *result,
+                            gpointer      user_data)
+{
+  GbEditorTab *tab = user_data;
+  GbEditorDocument *document = (GbEditorDocument *)source_object;
+  GError *error = NULL;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+  g_return_if_fail (G_IS_ASYNC_RESULT (result));
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  if (!gb_editor_document_load_finish (document, result, &error))
+    {
+      g_print ("%s", error->message);
+      //gb_editor_tab_set_error (tab, error);
+      g_clear_error (&error);
+    }
+
+  gb_widget_fade_hide (GTK_WIDGET (tab->priv->progress_bar));
+
+  g_object_unref (tab);
+
+  EXIT;
+}
+
+void
+gb_editor_tab_open_file (GbEditorTab *tab,
+                         GFile       *file)
+{
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  gtk_progress_bar_set_fraction (tab->priv->progress_bar, 0.0);
+  gtk_widget_show (GTK_WIDGET (tab->priv->progress_bar));
+
+  gb_editor_document_load_async (tab->priv->document,
+                                 file,
+                                 NULL, /* cancellable */
+                                 gb_editor_tab_progress_cb,
+                                 tab,
+                                 NULL,
+                                 gb_editor_tab_open_file_cb,
+                                 g_object_ref (tab));
+
+  EXIT;
+}
+
 void
 gb_editor_tab_open (GbEditorTab *tab)
 {
