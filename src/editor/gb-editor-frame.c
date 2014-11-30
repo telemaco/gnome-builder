@@ -21,39 +21,8 @@
 #include <glib/gi18n.h>
 
 #include "gb-editor-frame.h"
+#include "gb-editor-frame-private.h"
 #include "gb-log.h"
-#include "gb-source-change-gutter-renderer.h"
-#include "gb-source-code-assistant-renderer.h"
-#include "gb-source-search-highlighter.h"
-#include "gb-source-view.h"
-#include "gd-tagged-entry.h"
-#include "gca-structs.h"
-#include "nautilus-floating-bar.h"
-
-struct _GbEditorFramePrivate
-{
-  /* Widgets owned by GtkBuilder */
-  GtkSpinner                    *busy_spinner;
-  GbSourceChangeGutterRenderer  *diff_renderer;
-  GbSourceCodeAssistantRenderer *code_assistant_renderer;
-  NautilusFloatingBar           *floating_bar;
-  GtkButton                     *forward_search;
-  GtkButton                     *backward_search;
-  GtkScrolledWindow             *scrolled_window;
-  GtkRevealer                   *search_revealer;
-  GdTaggedEntry                 *search_entry;
-  GdTaggedEntryTag              *search_entry_tag;
-  GbSourceView                  *source_view;
-
-  /* Objects owned by GbEditorFrame */
-  GbEditorDocument              *document;
-  GtkSourceSearchContext        *search_context;
-  GtkSourceSearchSettings       *search_settings;
-  GbSourceSearchHighlighter     *search_highlighter;
-
-  /* Signal handler identifiers */
-  gulong                         cursor_moved_handler;
-};
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorFrame, gb_editor_frame, GTK_TYPE_OVERLAY)
 
