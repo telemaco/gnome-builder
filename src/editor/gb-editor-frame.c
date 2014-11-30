@@ -489,6 +489,26 @@ gb_editor_frame_on_search_entry_activate (GbEditorFrame *frame,
   gtk_widget_grab_focus (GTK_WIDGET (frame->priv->source_view));
 }
 
+static void
+gb_editor_frame_on_forward_search_clicked (GbEditorFrame *frame,
+                                           GtkButton     *button)
+{
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+  g_return_if_fail (GTK_IS_BUTTON (button));
+
+  gb_editor_frame_move_next_match (frame);
+}
+
+static void
+gb_editor_frame_on_backward_search_clicked (GbEditorFrame *frame,
+                                            GtkButton     *button)
+{
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+  g_return_if_fail (GTK_IS_BUTTON (button));
+
+  gb_editor_frame_move_previous_match (frame);
+}
+
 /**
  * gb_editor_frame_on_begin_search:
  *
@@ -711,6 +731,18 @@ gb_editor_frame_constructed (GObject *object)
   g_signal_connect_object (priv->search_entry,
                            "activate",
                            G_CALLBACK (gb_editor_frame_on_search_entry_activate),
+                           frame,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (priv->forward_search,
+                           "clicked",
+                           G_CALLBACK (gb_editor_frame_on_forward_search_clicked),
+                           frame,
+                           G_CONNECT_SWAPPED);
+
+  g_signal_connect_object (priv->backward_search,
+                           "clicked",
+                           G_CALLBACK (gb_editor_frame_on_backward_search_clicked),
                            frame,
                            G_CONNECT_SWAPPED);
 }
