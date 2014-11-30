@@ -34,7 +34,6 @@ void
 gb_editor_workspace_open (GbEditorWorkspace *workspace,
                           GFile             *file)
 {
-#if 0
   GbEditorTab *tab;
 
   g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
@@ -48,7 +47,6 @@ gb_editor_workspace_open (GbEditorWorkspace *workspace,
   gb_tab_grid_focus_tab (workspace->priv->tab_grid, GB_TAB (tab));
 
   gb_editor_tab_open_file (tab, file);
-#endif
 }
 
 static void
