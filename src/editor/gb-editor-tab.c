@@ -24,6 +24,7 @@
 #include "gb-animation.h"
 #include "gb-editor-document.h"
 #include "gb-editor-frame.h"
+#include "gb-editor-frame-private.h"
 #include "gb-editor-tab.h"
 #include "gb-log.h"
 #include "gb-widget.h"
@@ -276,7 +277,7 @@ gb_editor_tab_on_split_toggled (GbEditorTab     *tab,
     }
 }
 
-GbEditorFrame *
+static GbEditorFrame *
 gb_editor_tab_get_last_frame (GbEditorTab *tab)
 {
   g_return_val_if_fail (GB_IS_EDITOR_TAB (tab), NULL);
@@ -285,6 +286,57 @@ gb_editor_tab_get_last_frame (GbEditorTab *tab)
     return tab->priv->last_frame;
 
   return tab->priv->frame;
+}
+
+static void
+gb_editor_tab_scroll (GbEditorTab      *tab,
+                      GtkDirectionType  dir)
+{
+  GtkAdjustment *vadj;
+  GbEditorFrame *last_frame;
+  GtkScrolledWindow *scroller;
+  GtkTextMark *insert;
+  GtkTextView *view;
+  GtkTextBuffer *buffer;
+  GdkRectangle rect;
+  GtkTextIter iter;
+  gdouble amount;
+  gdouble value;
+  gdouble upper;
+
+  g_assert (GB_IS_EDITOR_TAB (tab));
+
+  last_frame = gb_editor_tab_get_last_frame (tab);
+  scroller = last_frame->priv->scrolled_window;
+  view = GTK_TEXT_VIEW (last_frame->priv->source_view);
+  buffer = GTK_TEXT_BUFFER (last_frame->priv->document);
+
+  insert = gtk_text_buffer_get_insert (buffer);
+  gtk_text_buffer_get_iter_at_mark (buffer, &iter, insert);
+  gtk_text_view_get_iter_location (view, &iter, &rect);
+
+  amount = (dir == GTK_DIR_UP) ? -rect.height : rect.height;
+
+  vadj = gtk_scrolled_window_get_vadjustment (scroller);
+  value = gtk_adjustment_get_value (vadj);
+  upper = gtk_adjustment_get_upper (vadj);
+  gtk_adjustment_set_value (vadj, CLAMP (value + amount, 0, upper));
+}
+
+void
+gb_editor_tab_scroll_up (GbEditorTab *tab)
+{
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  gb_editor_tab_scroll (tab, GTK_DIR_UP);
+}
+
+void
+gb_editor_tab_scroll_down (GbEditorTab *tab)
+{
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  gb_editor_tab_scroll (tab, GTK_DIR_DOWN);
 }
 
 static void
