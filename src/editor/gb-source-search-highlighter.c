@@ -228,9 +228,13 @@ gb_source_search_highlighter_draw (GbSourceSearchHighlighter *highlighter,
   add_matches (text_view, match_region, priv->search_context, &begin, &end);
 
   cairo_region_subtract (clip_region, match_region);
+
+#if 0
+  /* uncomment to shadow the background */
   gdk_cairo_region (cr, clip_region);
   cairo_set_source_rgba (cr, 0, 0, 0, 0.2);
   cairo_fill (cr);
+#endif
 
   {
     cairo_rectangle_int_t r;
