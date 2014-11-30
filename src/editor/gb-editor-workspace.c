@@ -267,8 +267,4 @@ gb_editor_workspace_init (GbEditorWorkspace *workspace)
   workspace->priv->command_map = g_hash_table_new (g_str_hash, g_str_equal);
 
   gtk_widget_init_template (GTK_WIDGET (workspace));
-
-#if 0
-  gb_editor_commands_init (workspace);
-#endif
 }
