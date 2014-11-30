@@ -64,6 +64,7 @@ libgnome_builder_la_SOURCES = \
 	src/editor/gb-editor-settings-widget.h \
 	src/editor/gb-editor-tab.c \
 	src/editor/gb-editor-tab.h \
+	src/editor/gb-editor-tab-private.h \
 	src/editor/gb-editor-workspace.c \
 	src/editor/gb-editor-workspace.h \
 	src/editor/gb-editor-workspace-private.h \

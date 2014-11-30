@@ -19,31 +19,12 @@
 #define G_LOG_DOMAIN "editor-tab"
 
 #include <glib/gi18n.h>
-#include <gtksourceview/gtksource.h>
 
-#include "gb-animation.h"
-#include "gb-editor-document.h"
-#include "gb-editor-frame.h"
 #include "gb-editor-frame-private.h"
 #include "gb-editor-tab.h"
+#include "gb-editor-tab-private.h"
 #include "gb-log.h"
 #include "gb-widget.h"
-
-struct _GbEditorTabPrivate
-{
-  /* Widgets owned by GtkBuilder */
-  GbEditorFrame    *frame;
-  GtkPaned         *paned;
-  GtkProgressBar   *progress_bar;
-  GtkToggleButton  *split_button;
-
-  /* Weak references */
-  GbEditorFrame    *last_frame;
-  GbAnimation      *progress_animation;
-
-  /* Objects owned by GbEditorTab */
-  GbEditorDocument *document;
-};
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorTab, gb_editor_tab, GB_TYPE_TAB)
 
@@ -277,7 +258,7 @@ gb_editor_tab_on_split_toggled (GbEditorTab     *tab,
     }
 }
 
-static GbEditorFrame *
+GbEditorFrame *
 gb_editor_tab_get_last_frame (GbEditorTab *tab)
 {
   g_return_val_if_fail (GB_IS_EDITOR_TAB (tab), NULL);
