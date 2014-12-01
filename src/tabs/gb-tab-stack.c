@@ -42,12 +42,25 @@ enum {
   LAST_SIGNAL
 };
 
+static void gb_tab_stack_tab_closed (GbTabStack *stack,
+                                     GbTab      *tab);
+
 static guint gSignals [LAST_SIGNAL];
 
 GtkWidget *
 gb_tab_stack_new (void)
 {
   return g_object_new (GB_TYPE_TAB_STACK, NULL);
+}
+
+static gboolean
+gb_tab_stack_queue_draw (gpointer data)
+{
+  g_return_val_if_fail (GTK_IS_WIDGET (data), FALSE);
+
+  gtk_widget_queue_draw (GTK_WIDGET (data));
+
+  return G_SOURCE_REMOVE;
 }
 
 guint
@@ -176,6 +189,13 @@ gb_tab_stack_remove_tab (GbTabStack *stack,
 
   if (gb_tab_stack_get_tab_iter (stack, tab, &iter))
     {
+      g_signal_handlers_disconnect_by_func (tab,
+                                            gb_tab_stack_tab_closed,
+                                            stack);
+      g_signal_handlers_disconnect_by_func (tab,
+                                            gb_tab_stack_queue_draw,
+                                            stack);
+
       gtk_container_remove (GTK_CONTAINER (stack->priv->controls),
                             gb_tab_get_controls (tab));
       gtk_container_remove (GTK_CONTAINER (stack->priv->stack),
@@ -339,16 +359,6 @@ gb_tab_stack_combobox_changed (GbTabStack  *stack,
 
       g_clear_object (&tab);
     }
-}
-
-static gboolean
-gb_tab_stack_queue_draw (gpointer data)
-{
-  g_return_val_if_fail (GTK_IS_WIDGET (data), FALSE);
-
-  gtk_widget_queue_draw (GTK_WIDGET (data));
-
-  return G_SOURCE_REMOVE;
 }
 
 GbTab *
