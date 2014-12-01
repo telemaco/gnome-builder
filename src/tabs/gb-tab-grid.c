@@ -756,6 +756,33 @@ gb_tab_grid_focus_tab (GbTabGrid *grid,
     }
 }
 
+GbTab *
+gb_tab_grid_find_tab_typed (GbTabGrid *grid,
+                            GType      type)
+{
+  GbTab *ret = NULL;
+  GList *list;
+  GList *iter;
+
+  g_return_val_if_fail (GB_IS_TAB_GRID (grid), NULL);
+  g_return_val_if_fail (g_type_is_a (type, GB_TYPE_TAB), NULL);
+
+  list = gb_tab_grid_get_tabs (grid);
+
+  for (iter = list; iter; iter = iter->next)
+    {
+      if (g_type_is_a (G_TYPE_FROM_INSTANCE (iter->data), type))
+        {
+          ret = iter->data;
+          break;
+        }
+    }
+
+  g_list_free (list);
+
+  return ret;
+}
+
 static void
 gb_tab_grid_grab_focus (GtkWidget *widget)
 {

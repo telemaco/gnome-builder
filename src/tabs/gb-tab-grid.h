@@ -63,6 +63,8 @@ void       gb_tab_grid_focus_next_tab     (GbTabGrid *grid,
                                            GbTab     *tab);
 void       gb_tab_grid_focus_previous_tab (GbTabGrid *grid,
                                            GbTab     *tab);
+GbTab     *gb_tab_grid_find_tab_typed     (GbTabGrid *grid,
+                                           GType      type);
 
 G_END_DECLS
 
