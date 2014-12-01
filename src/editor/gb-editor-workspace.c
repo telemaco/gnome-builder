@@ -102,6 +102,19 @@ scroll_down_tab (GSimpleAction *action,
 }
 
 static void
+toggle_split_tab (GSimpleAction *action,
+                  GVariant      *parameter,
+                  gpointer       user_data)
+{
+  GbEditorWorkspace *workspace = user_data;
+  GbTab *tab;
+
+  tab = gb_tab_grid_get_active (workspace->priv->tab_grid);
+  if (GB_IS_EDITOR_TAB (tab))
+    gb_editor_tab_toggle_split (GB_EDITOR_TAB (tab));
+}
+
+static void
 close_tab (GSimpleAction *action,
            GVariant      *parameter,
            gpointer       user_data)
@@ -256,6 +269,7 @@ gb_editor_workspace_init (GbEditorWorkspace *workspace)
       { "save-as", save_as_tab },
       { "scroll-up", scroll_up_tab },
       { "scroll-down", scroll_down_tab },
+      { "toggle-split", toggle_split_tab },
     };
 
   workspace->priv = gb_editor_workspace_get_instance_private (workspace);

@@ -253,6 +253,17 @@ gb_editor_tab_open_file (GbEditorTab *tab,
   EXIT;
 }
 
+void
+gb_editor_tab_toggle_split (GbEditorTab *tab)
+{
+  gboolean active;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  active = gtk_toggle_button_get_active (tab->priv->split_button);
+  gtk_toggle_button_set_active (tab->priv->split_button, !active);
+}
+
 static void
 gb_editor_tab_on_frame_focused (GbEditorTab   *tab,
                                 GbEditorFrame *frame)
