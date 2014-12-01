@@ -338,6 +338,35 @@ gb_editor_tab_get_last_frame (GbEditorTab *tab)
   return tab->priv->frame;
 }
 
+void
+gb_editor_tab_scroll_to_line (GbEditorTab *tab,
+                              guint        line,
+                              guint        line_offset)
+{
+  GbEditorFrame *frame;
+  GtkTextIter iter;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  frame = gb_editor_tab_get_last_frame (tab);
+
+  gtk_text_buffer_get_iter_at_line (GTK_TEXT_BUFFER (tab->priv->document),
+                                    &iter, line);
+  for (; line_offset; line_offset--)
+    {
+      if (gtk_text_iter_ends_line (&iter))
+        break;
+      if (!gtk_text_iter_forward_char (&iter))
+        break;
+    }
+
+  gtk_text_buffer_select_range (GTK_TEXT_BUFFER (tab->priv->document),
+                                &iter, &iter);
+
+  gtk_text_view_scroll_to_iter (GTK_TEXT_VIEW (frame->priv->source_view), &iter,
+                                0.0, FALSE, 0.0, 0.5);
+}
+
 static void
 gb_editor_tab_scroll (GbEditorTab      *tab,
                       GtkDirectionType  dir)
