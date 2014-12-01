@@ -28,7 +28,9 @@ enum {
   LAST_PROP
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (GbEditorWorkspace, gb_editor_workspace, GB_TYPE_WORKSPACE)
+G_DEFINE_TYPE_WITH_PRIVATE (GbEditorWorkspace,
+                            gb_editor_workspace,
+                            GB_TYPE_WORKSPACE)
 
 void
 gb_editor_workspace_open (GbEditorWorkspace *workspace,
@@ -219,11 +221,16 @@ open_tab (GSimpleAction *action,
           GFile *file = iter->data;
 
           tab = gb_editor_tab_new ();
+
           gb_editor_tab_open_file (tab, file);
+
           gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
                              GTK_WIDGET (tab));
+
           gtk_widget_show (GTK_WIDGET (tab));
           gtk_widget_grab_focus (GTK_WIDGET (tab));
+
+          gb_editor_tab_restore_file_mark (tab);
 
           g_clear_object (&file);
         }

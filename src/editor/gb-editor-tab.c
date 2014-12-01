@@ -24,6 +24,8 @@
 #include "gb-editor-frame-private.h"
 #include "gb-editor-tab.h"
 #include "gb-editor-tab-private.h"
+#include "gb-editor-file-mark.h"
+#include "gb-editor-file-marks.h"
 #include "gb-log.h"
 #include "gb-widget.h"
 
@@ -223,6 +225,8 @@ gb_editor_tab_open_file_cb (GObject      *source_object,
       g_clear_error (&error);
     }
 
+  gb_editor_tab_restore_file_mark (tab);
+
   gb_widget_fade_hide (GTK_WIDGET (tab->priv->progress_bar));
 
   g_object_unref (tab);
@@ -251,6 +255,57 @@ gb_editor_tab_open_file (GbEditorTab *tab,
                                  g_object_ref (tab));
 
   EXIT;
+}
+
+void
+gb_editor_tab_restore_file_mark (GbEditorTab *tab)
+{
+  GbEditorTabPrivate *priv;
+  GtkSourceFile *file;
+  GSettings *settings;
+  gboolean restore_mark;
+  GFile *location;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  priv = tab->priv;
+
+  settings = g_settings_new ("org.gnome.builder.editor");
+  restore_mark = g_settings_get_boolean (settings, "restore-insert-mark");
+  g_object_unref (settings);
+
+  if (!restore_mark)
+    {
+      GtkTextIter iter;
+
+      gtk_text_buffer_get_start_iter (GTK_TEXT_BUFFER (tab->priv->document),
+                                      &iter);
+      gtk_text_buffer_select_range (GTK_TEXT_BUFFER (tab->priv->document),
+                                    &iter, &iter);
+      return;
+    }
+
+  file = gb_editor_document_get_file (priv->document);
+  location = gtk_source_file_get_location (file);
+
+  if (location)
+    {
+      GbEditorFileMarks *marks;
+      GbEditorFileMark *mark;
+      guint line;
+      guint column;
+
+      marks = gb_editor_file_marks_get_default ();
+      mark = gb_editor_file_marks_get_for_file (marks, location);
+
+      if (mark)
+        {
+          line = gb_editor_file_mark_get_line (mark);
+          column = gb_editor_file_mark_get_column (mark);
+
+          gb_editor_tab_scroll_to_line (tab, line, column);
+        }
+    }
 }
 
 void

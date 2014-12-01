@@ -51,20 +51,21 @@ struct _GbEditorTabClass
   GbTabClass parent_class;
 };
 
-GbEditorTab *gb_editor_tab_new            (void);
-GType        gb_editor_tab_get_type       (void) G_GNUC_CONST;
-void         gb_editor_tab_save           (GbEditorTab *tab);
-void         gb_editor_tab_save_as        (GbEditorTab *tab);
-void         gb_editor_tab_open_file      (GbEditorTab *tab,
-                                           GFile       *file);
-void         gb_editor_tab_scroll_up      (GbEditorTab *tab);
-void         gb_editor_tab_scroll_down    (GbEditorTab *tab);
-void         gb_editor_tab_toggle_split   (GbEditorTab *tab);
-void         gb_editor_tab_find           (GbEditorTab *tab);
-void         gb_editor_tab_reformat       (GbEditorTab *tab);
-void         gb_editor_tab_scroll_to_line (GbEditorTab *tab,
-                                           guint        line,
-                                           guint        line_offset);
+GbEditorTab *gb_editor_tab_new               (void);
+GType        gb_editor_tab_get_type          (void) G_GNUC_CONST;
+void         gb_editor_tab_save              (GbEditorTab *tab);
+void         gb_editor_tab_save_as           (GbEditorTab *tab);
+void         gb_editor_tab_open_file         (GbEditorTab *tab,
+                                              GFile       *file);
+void         gb_editor_tab_scroll_up         (GbEditorTab *tab);
+void         gb_editor_tab_scroll_down       (GbEditorTab *tab);
+void         gb_editor_tab_toggle_split      (GbEditorTab *tab);
+void         gb_editor_tab_find              (GbEditorTab *tab);
+void         gb_editor_tab_reformat          (GbEditorTab *tab);
+void         gb_editor_tab_scroll_to_line    (GbEditorTab *tab,
+                                              guint        line,
+                                              guint        line_offset);
+void         gb_editor_tab_restore_file_mark (GbEditorTab *tab);
 
 G_END_DECLS
 
