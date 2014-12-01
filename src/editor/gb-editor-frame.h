@@ -57,6 +57,8 @@ void              gb_editor_frame_link         (GbEditorFrame    *src,
 GbEditorDocument *gb_editor_frame_get_document (GbEditorFrame    *frame);
 void              gb_editor_frame_set_document (GbEditorFrame    *frame,
                                                 GbEditorDocument *document);
+void              gb_editor_frame_find         (GbEditorFrame    *frame,
+                                                const gchar      *search_text);
 
 G_END_DECLS
 

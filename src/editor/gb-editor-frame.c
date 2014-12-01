@@ -535,6 +535,19 @@ gb_editor_frame_on_begin_search (GbEditorFrame    *frame,
   EXIT;
 }
 
+void
+gb_editor_frame_find (GbEditorFrame *frame,
+                      const gchar   *search_text)
+{
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+
+  if (!search_text)
+    search_text = "";
+
+  gb_editor_frame_on_begin_search (frame, GTK_DIR_DOWN, search_text,
+                                   frame->priv->source_view);
+}
+
 static gboolean
 gb_editor_frame_on_query_tooltip (GbEditorFrame *frame,
                                   gint           x,

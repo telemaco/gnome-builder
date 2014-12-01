@@ -464,6 +464,17 @@ gb_editor_tab_on_modified_changed (GbEditorTab   *tab,
   g_object_notify (G_OBJECT (tab), "title");
 }
 
+void
+gb_editor_tab_find (GbEditorTab *tab)
+{
+  GbEditorFrame *frame;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  frame = gb_editor_tab_get_last_frame (tab);
+  gb_editor_frame_find (frame, NULL);
+}
+
 static void
 gb_editor_tab_constructed (GObject *object)
 {

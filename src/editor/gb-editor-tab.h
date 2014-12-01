@@ -60,6 +60,7 @@ void         gb_editor_tab_open_file    (GbEditorTab *tab,
 void         gb_editor_tab_scroll_up    (GbEditorTab *tab);
 void         gb_editor_tab_scroll_down  (GbEditorTab *tab);
 void         gb_editor_tab_toggle_split (GbEditorTab *tab);
+void         gb_editor_tab_find         (GbEditorTab *tab);
 
 G_END_DECLS
 
