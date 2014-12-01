@@ -92,6 +92,8 @@ libgnome_builder_la_SOURCES = \
 	src/markdown/gs-markdown.h \
 	src/markdown/gb-markdown-preview.c \
 	src/markdown/gb-markdown-preview.h \
+	src/markdown/gb-markdown-tab.c \
+	src/markdown/gb-markdown-tab.h \
 	src/navigation/gb-navigation-list.h \
 	src/navigation/gb-navigation-list.c \
 	src/navigation/gb-navigation-item.h \

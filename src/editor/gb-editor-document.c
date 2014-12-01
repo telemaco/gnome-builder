@@ -106,33 +106,6 @@ gb_editor_document_get_file (GbEditorDocument *document)
   return document->priv->file;
 }
 
-void
-gb_editor_document_set_file (GbEditorDocument *document,
-                             GtkSourceFile    *file)
-{
-  GbEditorDocumentPrivate *priv;
-
-  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
-  g_return_if_fail (!file || GTK_SOURCE_IS_FILE (file));
-
-  priv = document->priv;
-
-  if (file != priv->file)
-    {
-      g_clear_object (&priv->file);
-
-      if (file)
-        {
-          priv->file = g_object_ref (file);
-          g_object_bind_property (priv->file, "location",
-                                  priv->change_monitor, "file",
-                                  G_BINDING_SYNC_CREATE);
-        }
-
-      g_object_notify_by_pspec (G_OBJECT (document), gParamSpecs [PROP_FILE]);
-    }
-}
-
 static void
 gb_editor_document_set_style_scheme_name (GbEditorDocument *document,
                                           const gchar      *style_scheme_name)
@@ -464,6 +437,25 @@ gb_editor_document_guess_language (GbEditorDocument *document)
 }
 
 static void
+gb_editor_document_notify_file_location (GbEditorDocument *document,
+                                         GParamSpec       *pspec,
+                                         GtkSourceFile    *file)
+{
+  GbEditorDocumentPrivate *priv;
+  GFile *location;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+  g_return_if_fail (GTK_SOURCE_IS_FILE (file));
+
+  priv = document->priv;
+
+  location = gtk_source_file_get_location (file);
+  gb_source_change_monitor_set_file (priv->change_monitor, location);
+
+  gb_editor_document_guess_language (document);
+}
+
+static void
 gb_editor_document_save_cb (GObject      *object,
                             GAsyncResult *result,
                             gpointer      user_data)
@@ -724,10 +716,6 @@ gb_editor_document_set_property (GObject      *object,
 
   switch (prop_id)
     {
-    case PROP_FILE:
-      gb_editor_document_set_file (self, g_value_get_object (value));
-      break;
-
     case PROP_STYLE_SCHEME_NAME:
       gb_editor_document_set_style_scheme_name (self,
                                                 g_value_get_string (value));
@@ -771,7 +759,7 @@ gb_editor_document_class_init (GbEditorDocumentClass *klass)
                          _("File"),
                          _("The backing file for the document."),
                          GTK_SOURCE_TYPE_FILE,
-                         (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+                         (G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (object_class, PROP_FILE,
                                    gParamSpecs [PROP_FILE]);
 
@@ -815,9 +803,11 @@ gb_editor_document_init (GbEditorDocument *document)
   document->priv->change_monitor = gb_source_change_monitor_new (GTK_TEXT_BUFFER (document));
   document->priv->code_assistant = gb_source_code_assistant_new (GTK_TEXT_BUFFER (document));
 
-  g_object_bind_property (document->priv->file, "location",
-                          document->priv->change_monitor, "file",
-                          G_BINDING_SYNC_CREATE);
+  g_signal_connect_object (document->priv->file,
+                           "notify::location",
+                           G_CALLBACK (gb_editor_document_notify_file_location),
+                           document,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (document->priv->code_assistant,
                            "changed",

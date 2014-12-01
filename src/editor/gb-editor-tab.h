@@ -66,6 +66,7 @@ void         gb_editor_tab_scroll_to_line    (GbEditorTab *tab,
                                               guint        line,
                                               guint        line_offset);
 void         gb_editor_tab_restore_file_mark (GbEditorTab *tab);
+GbTab       *gb_editor_tab_preview           (GbEditorTab *tab);
 
 G_END_DECLS
 

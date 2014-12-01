@@ -27,6 +27,7 @@
 #include "gb-editor-file-mark.h"
 #include "gb-editor-file-marks.h"
 #include "gb-log.h"
+#include "gb-markdown-tab.h"
 #include "gb-widget.h"
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorTab, gb_editor_tab, GB_TYPE_TAB)
@@ -568,6 +569,54 @@ gb_editor_tab_reformat (GbEditorTab *tab)
 
   frame = gb_editor_tab_get_last_frame (tab);
   gb_editor_frame_reformat (frame);
+}
+
+static gboolean
+markdown_preview_title (GBinding     *binding,
+                        const GValue *from_value,
+                        GValue       *to_value,
+                        gpointer      user_data)
+{
+  gchar *str;
+
+  str = g_strdup_printf (_("%s (Markdown Preview)"),
+                         g_value_get_string (from_value));
+  g_value_take_string (to_value, str);
+
+  return TRUE;
+}
+
+
+GbTab *
+gb_editor_tab_preview (GbEditorTab *tab)
+{
+  GbEditorTabPrivate *priv;
+  GtkSourceLanguage *lang;
+  const gchar *lang_id;
+  GbTab *preview = NULL;
+
+  g_return_val_if_fail (GB_IS_EDITOR_TAB (tab), NULL);
+
+  priv = tab->priv;
+
+  lang = gtk_source_buffer_get_language (GTK_SOURCE_BUFFER (priv->document));
+
+  if (!lang || !(lang_id = gtk_source_language_get_id (lang)))
+    return NULL;
+
+  if (g_str_equal (lang_id, "markdown"))
+    {
+      preview = g_object_new (GB_TYPE_MARKDOWN_TAB,
+                              "buffer", priv->document,
+                              "visible", TRUE,
+                              NULL);
+      g_object_bind_property_full (tab, "title", preview, "title",
+                                   G_BINDING_SYNC_CREATE,
+                                   markdown_preview_title,
+                                   NULL, NULL, NULL);
+    }
+
+  return preview;
 }
 
 static void

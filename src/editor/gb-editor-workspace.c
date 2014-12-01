@@ -143,6 +143,48 @@ reformat_tab (GSimpleAction *action,
 }
 
 static void
+preview_tab (GSimpleAction *action,
+             GVariant      *parameter,
+             gpointer       user_data)
+{
+  GbEditorWorkspacePrivate *priv;
+  GbEditorWorkspace *workspace = user_data;
+  GbTab *preview = NULL;
+  GbTab *tab;
+
+  g_return_if_fail (GB_IS_EDITOR_WORKSPACE (workspace));
+
+  priv = workspace->priv;
+
+  tab = gb_tab_grid_get_active (workspace->priv->tab_grid);
+
+  if (GB_IS_EDITOR_TAB (tab))
+    {
+      preview = gb_editor_tab_preview (GB_EDITOR_TAB (tab));
+
+      if (preview)
+        {
+          /*
+           * This widget might be already consumed in a stack somewhere.
+           * If so, we want to jump to it, otherwise we want to add it
+           * to a stack next to the current tab.
+           */
+          if (!gtk_widget_get_parent (GTK_WIDGET (preview)))
+            {
+              gtk_container_add (GTK_CONTAINER (priv->tab_grid),
+                                 GTK_WIDGET (preview));
+              gb_tab_grid_move_tab_right (priv->tab_grid, preview);
+              gb_tab_grid_focus_tab (priv->tab_grid, tab);
+            }
+          else
+            {
+              g_warning ("TODO: implement refocus tab.");
+            }
+        }
+    }
+}
+
+static void
 close_tab (GSimpleAction *action,
            GVariant      *parameter,
            gpointer       user_data)
@@ -305,6 +347,7 @@ gb_editor_workspace_init (GbEditorWorkspace *workspace)
       { "toggle-split", toggle_split_tab },
       { "find", find_tab },
       { "reformat", reformat_tab },
+      { "preview", preview_tab },
     };
 
   workspace->priv = gb_editor_workspace_get_instance_private (workspace);
