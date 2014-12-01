@@ -4,8 +4,8 @@
   <template class="GbTabStack" parent="GtkBox">
     <property name="orientation">vertical</property>
     <child>
-      <object class="GtkBox">
-        <property name="visible">true</property>
+      <object class="GtkBox" id="header_box">
+        <property name="visible">false</property>
         <property name="orientation">horizontal</property>
         <style>
           <class name="linked"/>

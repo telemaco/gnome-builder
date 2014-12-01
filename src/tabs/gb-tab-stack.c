@@ -29,6 +29,7 @@ struct _GbTabStackPrivate
   GtkButton     *close;
   GtkComboBox   *combo;
   GtkStack      *controls;
+  GtkBox        *header_box;
   GtkMenuButton *stack_menu;
   GtkStack      *stack;
   GtkListStore  *store;
@@ -399,6 +400,8 @@ gb_tab_stack_add_tab (GbTabStack *stack,
                            stack,
                            G_CONNECT_SWAPPED);
 
+  gtk_widget_show (GTK_WIDGET (stack->priv->header_box));
+
   g_signal_emit (stack, gSignals [CHANGED], 0);
 }
 
@@ -507,6 +510,7 @@ gb_tab_stack_class_init (GbTabStackClass *klass)
   gtk_widget_class_bind_template_child_internal_private (widget_class, GbTabStack, controls);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, close);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, combo);
+  gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, header_box);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, stack);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, stack_menu);
   gtk_widget_class_bind_template_child_private (widget_class, GbTabStack, store);
