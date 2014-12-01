@@ -85,6 +85,14 @@ gb_source_change_monitor_get_line (GbSourceChangeMonitor *monitor,
       return (GPOINTER_TO_INT (value) & GB_SOURCE_CHANGE_MASK);
     }
 
+  /*
+   * If we found a repository, but don't have state, then we are
+   * possibly just a new file in the repository. Mark the line as
+   * added.
+   */
+  if (monitor->priv->repo)
+    return GB_SOURCE_CHANGE_ADDED;
+
   return GB_SOURCE_CHANGE_NONE;
 }
 
@@ -682,6 +690,5 @@ gb_source_change_monitor_init (GbSourceChangeMonitor *monitor)
 {
   ENTRY;
   monitor->priv = gb_source_change_monitor_get_instance_private (monitor);
-  monitor->priv->state = g_hash_table_new (g_direct_hash, g_direct_equal);
   EXIT;
 }
