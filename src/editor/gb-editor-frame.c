@@ -22,6 +22,7 @@
 
 #include "gb-editor-frame.h"
 #include "gb-editor-frame-private.h"
+#include "gb-editor-workspace.h"
 #include "gb-log.h"
 #include "gb-source-formatter.h"
 #include "gb-string.h"
@@ -826,15 +827,64 @@ gb_editor_frame_on_command_toggled (GbEditorFrame *frame,
 
   workbench = gb_widget_get_workbench (GTK_WIDGET (frame));
   if (!workbench)
-    return;
+    EXIT;
 
   action = g_action_map_lookup_action (G_ACTION_MAP (workbench),
                                        "toggle-command-bar");
   if (!action)
-    return;
+    EXIT;
 
   params = g_variant_new_boolean (visible);
   g_action_activate (action, params);
+
+  EXIT;
+}
+
+static void
+gb_editor_frame_on_jump_to_doc (GbEditorFrame *frame,
+                                const gchar   *search_text,
+                                GbSourceVim   *vim)
+{
+  GbWorkbench *workbench;
+  GAction *action;
+  GVariant *params;
+  GtkWidget *parent;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+  g_return_if_fail (GB_IS_SOURCE_VIM (vim));
+
+  workbench = gb_widget_get_workbench (GTK_WIDGET (frame));
+  if (!workbench)
+    EXIT;
+
+  parent = GTK_WIDGET (frame);
+
+  /*
+   * TODO: I really want this to all just work by searching for muxed actions
+   *       in Gtk+ directly. Matthias has some patches and Ryan needs to
+   *       review them. This all becomes easier then.
+   */
+
+  while (parent && !GB_IS_EDITOR_WORKSPACE (parent))
+    parent = gtk_widget_get_parent (parent);
+
+  if (GB_IS_EDITOR_WORKSPACE (parent))
+    {
+      GActionGroup *group;
+
+      group = gb_workspace_get_actions (GB_WORKSPACE (parent));
+      action = g_action_map_lookup_action (G_ACTION_MAP (group),
+                                           "jump-to-doc");
+      if (!action)
+        EXIT;
+
+      params = g_variant_new_string (search_text);
+      g_action_activate (action, params);
+
+      EXIT;
+    }
 
   EXIT;
 }
@@ -924,6 +974,11 @@ gb_editor_frame_constructed (GObject *object)
   g_signal_connect_object (vim,
                            "command-visibility-toggled",
                            G_CALLBACK (gb_editor_frame_on_command_toggled),
+                           frame,
+                           G_CONNECT_SWAPPED);
+  g_signal_connect_object (vim,
+                           "jump-to-doc",
+                           G_CALLBACK (gb_editor_frame_on_jump_to_doc),
                            frame,
                            G_CONNECT_SWAPPED);
 

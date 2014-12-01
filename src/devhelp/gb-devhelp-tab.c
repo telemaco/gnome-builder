@@ -53,12 +53,18 @@ void
 gb_devhelp_tab_jump_to_keyword (GbDevhelpTab *tab,
                                 const gchar  *keyword)
 {
+  gchar *title;
+
   ENTRY;
 
   g_return_if_fail (GB_IS_DEVHELP_TAB (tab));
   g_return_if_fail (keyword);
 
   dh_assistant_view_search (tab->priv->assistant_view, keyword);
+
+  title = g_strdup_printf (_("Documentation (%s)"), keyword);
+  gb_tab_set_title (GB_TAB (tab), title);
+  g_free (title);
 
   EXIT;
 }

@@ -18,6 +18,7 @@
 
 #include <glib/gi18n.h>
 
+#include "gb-devhelp-tab.h"
 #include "gb-editor-workspace.h"
 #include "gb-editor-workspace-private.h"
 #include "gb-tab-grid.h"
@@ -213,6 +214,36 @@ new_tab (GSimpleAction *action,
 }
 
 static void
+jump_to_doc_tab (GSimpleAction *action,
+                 GVariant      *parameter,
+                 gpointer       user_data)
+{
+  GbEditorWorkspace *workspace = user_data;
+  const gchar *search_text;
+  GbTab *tab;
+
+  search_text = g_variant_get_string (parameter, NULL);
+  if (!search_text || !*search_text)
+    return;
+
+  tab = gb_tab_grid_find_tab_typed (workspace->priv->tab_grid,
+                                    GB_TYPE_DEVHELP_TAB);
+
+  if (!tab)
+    {
+      tab = g_object_new (GB_TYPE_DEVHELP_TAB,
+                          "visible", TRUE,
+                          NULL);
+      gtk_container_add (GTK_CONTAINER (workspace->priv->tab_grid),
+                         GTK_WIDGET (tab));
+      gb_tab_grid_move_tab_right (workspace->priv->tab_grid, tab);
+    }
+
+  gb_devhelp_tab_jump_to_keyword (GB_DEVHELP_TAB (tab), search_text);
+  gb_tab_grid_focus_tab (workspace->priv->tab_grid, tab);
+}
+
+static void
 open_tab (GSimpleAction *action,
           GVariant      *parameter,
           gpointer       user_data)
@@ -348,6 +379,7 @@ gb_editor_workspace_init (GbEditorWorkspace *workspace)
       { "find", find_tab },
       { "reformat", reformat_tab },
       { "preview", preview_tab },
+      { "jump-to-doc", jump_to_doc_tab, "s" },
     };
 
   workspace->priv = gb_editor_workspace_get_instance_private (workspace);
