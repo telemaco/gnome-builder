@@ -30,6 +30,8 @@ struct _GbEditorDocumentPrivate
   GtkSourceFile         *file;
   GbSourceChangeMonitor *change_monitor;
   GbSourceCodeAssistant *code_assistant;
+
+  guint trim_trailing_whitespace : 1;
 };
 
 enum {
@@ -37,6 +39,7 @@ enum {
   PROP_CHANGE_MONITOR,
   PROP_FILE,
   PROP_STYLE_SCHEME_NAME,
+  PROP_TRIM_TRAILING_WHITESPACE,
   LAST_PROP
 };
 
@@ -47,13 +50,35 @@ enum {
 
 G_DEFINE_TYPE_WITH_PRIVATE (GbEditorDocument, gb_editor_document, GTK_SOURCE_TYPE_BUFFER)
 
-static  GParamSpec *gParamSpecs [LAST_PROP];
+static GParamSpec *gParamSpecs [LAST_PROP];
 static guint gSignals [LAST_SIGNAL];
 
 GbEditorDocument *
 gb_editor_document_new (void)
 {
   return g_object_new (GB_TYPE_EDITOR_DOCUMENT, NULL);
+}
+
+gboolean
+gb_editor_document_get_trim_trailing_whitespace (GbEditorDocument *document)
+{
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), FALSE);
+
+  return document->priv->trim_trailing_whitespace;
+}
+
+void
+gb_editor_document_set_trim_trailing_whitespace (GbEditorDocument *document,
+                                                 gboolean          trim_trailing_whitespace)
+{
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+
+  if (trim_trailing_whitespace != document->priv->trim_trailing_whitespace)
+    {
+      document->priv->trim_trailing_whitespace = trim_trailing_whitespace;
+      g_object_notify_by_pspec (G_OBJECT (document),
+                                gParamSpecs [PROP_TRIM_TRAILING_WHITESPACE]);
+    }
 }
 
 GbSourceChangeMonitor *
@@ -331,6 +356,74 @@ gb_editor_document_code_assistant_changed (GbEditorDocument      *document,
   g_array_unref (ar);
 }
 
+static gboolean
+gb_editor_document_should_trim_line (GbEditorDocument *document,
+                                     guint             line)
+{
+  GbSourceChangeFlags flags;
+
+  g_return_val_if_fail (GB_IS_EDITOR_DOCUMENT (document), FALSE);
+
+  flags = gb_source_change_monitor_get_line (document->priv->change_monitor,
+                                             line);
+
+  return !!flags;
+}
+
+static gboolean
+text_iter_is_space (const GtkTextIter *iter)
+{
+  return g_unichar_isspace (gtk_text_iter_get_char (iter));
+}
+
+static void
+gb_editor_document_trim (GbEditorDocument *document)
+{
+  GtkTextBuffer *buffer;
+  GtkTextIter iter;
+  gint line;
+
+  ENTRY;
+
+  g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
+
+  buffer = GTK_TEXT_BUFFER (document);
+
+  gtk_text_buffer_get_end_iter (buffer, &iter);
+
+  for (line = gtk_text_iter_get_line (&iter); line >= 0; line--)
+    {
+      if (gb_editor_document_should_trim_line (document, line))
+        {
+          gtk_text_buffer_get_iter_at_line (buffer, &iter, line);
+
+          if (gtk_text_iter_forward_to_line_end (&iter) &&
+              text_iter_is_space (&iter))
+            {
+              GtkTextIter begin = iter;
+
+              while (text_iter_is_space (&begin))
+                {
+                  if (gtk_text_iter_starts_line (&begin))
+                    break;
+
+                  if (!gtk_text_iter_backward_char (&begin))
+                    break;
+                }
+
+              if (!text_iter_is_space (&begin) &&
+                  !gtk_text_iter_ends_line (&begin))
+                gtk_text_iter_forward_char (&begin);
+
+              if (!gtk_text_iter_equal (&begin, &iter))
+                gtk_text_buffer_delete (buffer, &begin, &iter);
+            }
+        }
+    }
+
+  EXIT;
+}
+
 static void
 gb_editor_document_guess_language (GbEditorDocument *document)
 {
@@ -425,6 +518,9 @@ gb_editor_document_save_async (GbEditorDocument      *document,
 
   g_return_if_fail (GB_IS_EDITOR_DOCUMENT (document));
   g_return_if_fail (!cancellable || G_IS_CANCELLABLE (cancellable));
+
+  if (document->priv->trim_trailing_whitespace)
+    gb_editor_document_trim (document);
 
   task = g_task_new (document, cancellable, callback, user_data);
 
@@ -578,6 +674,11 @@ gb_editor_document_get_property (GObject    *object,
       g_value_set_object (value, gb_editor_document_get_file (self));
       break;
 
+    case PROP_TRIM_TRAILING_WHITESPACE:
+      g_value_set_boolean (value,
+                           gb_editor_document_get_trim_trailing_whitespace (self));
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
     }
@@ -600,6 +701,11 @@ gb_editor_document_set_property (GObject      *object,
     case PROP_STYLE_SCHEME_NAME:
       gb_editor_document_set_style_scheme_name (self,
                                                 g_value_get_string (value));
+      break;
+
+    case PROP_TRIM_TRAILING_WHITESPACE:
+      gb_editor_document_set_trim_trailing_whitespace (self,
+                                                       g_value_get_boolean (value));
       break;
 
     default:
@@ -648,6 +754,15 @@ gb_editor_document_class_init (GbEditorDocumentClass *klass)
   g_object_class_install_property (object_class, PROP_STYLE_SCHEME_NAME,
                                    gParamSpecs [PROP_STYLE_SCHEME_NAME]);
 
+  gParamSpecs [PROP_TRIM_TRAILING_WHITESPACE] =
+    g_param_spec_boolean ("trim-trailing-whitespace",
+                         _("Trim Trailing Whitespace"),
+                         _("If whitespace should be trimmed before saving."),
+                         TRUE,
+                         (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (object_class, PROP_TRIM_TRAILING_WHITESPACE,
+                                   gParamSpecs [PROP_TRIM_TRAILING_WHITESPACE]);
+
   gSignals[CURSOR_MOVED] =
     g_signal_new ("cursor-moved",
                   G_OBJECT_CLASS_TYPE (object_class),
@@ -665,6 +780,7 @@ gb_editor_document_init (GbEditorDocument *document)
 {
   document->priv = gb_editor_document_get_instance_private (document);
 
+  document->priv->trim_trailing_whitespace = TRUE;
   document->priv->file = gtk_source_file_new ();
   document->priv->change_monitor = gb_source_change_monitor_new (GTK_TEXT_BUFFER (document));
   document->priv->code_assistant = gb_source_code_assistant_new (GTK_TEXT_BUFFER (document));
