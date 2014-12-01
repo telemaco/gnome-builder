@@ -22,6 +22,7 @@
 #include <gtksourceview/gtksource.h>
 
 #include "gb-editor-document.h"
+#include "gb-editor-file-marks.h"
 #include "gb-log.h"
 #include "gca-structs.h"
 
@@ -516,6 +517,9 @@ gb_editor_document_save_async (GbEditorDocument      *document,
                                gpointer               user_data)
 {
   GtkSourceFileSaver *saver;
+  GbEditorFileMarks *marks;
+  GbEditorFileMark *mark;
+  GFile *location;
   GTask *task;
 
   ENTRY;
@@ -530,6 +534,28 @@ gb_editor_document_save_async (GbEditorDocument      *document,
 
   saver = gtk_source_file_saver_new (GTK_SOURCE_BUFFER (document),
                                      document->priv->file);
+
+  location = gtk_source_file_get_location (document->priv->file);
+
+  if (location)
+    {
+      GtkTextMark *insert;
+      GtkTextIter iter;
+      guint line;
+      guint column;
+
+      marks = gb_editor_file_marks_get_default ();
+      mark = gb_editor_file_marks_get_for_file (marks, location);
+
+      insert = gtk_text_buffer_get_insert (GTK_TEXT_BUFFER (document));
+      gtk_text_buffer_get_iter_at_mark (GTK_TEXT_BUFFER (document), &iter,
+                                        insert);
+      line = gtk_text_iter_get_line (&iter);
+      column = gtk_text_iter_get_line_offset (&iter);
+
+      gb_editor_file_mark_set_line (mark, line);
+      gb_editor_file_mark_set_column (mark, column);
+    }
 
   gtk_source_file_saver_save_async (saver,
                                     G_PRIORITY_DEFAULT,
