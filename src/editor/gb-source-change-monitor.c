@@ -524,6 +524,23 @@ gb_source_change_monitor_get_file (GbSourceChangeMonitor *monitor)
 }
 
 void
+gb_source_change_monitor_reload (GbSourceChangeMonitor *monitor)
+{
+  ENTRY;
+
+  g_return_if_fail (GB_IS_SOURCE_CHANGE_MONITOR (monitor));
+
+  if (monitor->priv->file)
+    {
+      gb_source_change_monitor_discover_repository (monitor);
+      gb_source_change_monitor_load_blob (monitor);
+      gb_source_change_monitor_queue_parse (monitor);
+    }
+
+  EXIT;
+}
+
+void
 gb_source_change_monitor_set_file (GbSourceChangeMonitor *monitor,
                                    GFile                 *file)
 {
@@ -546,13 +563,10 @@ gb_source_change_monitor_set_file (GbSourceChangeMonitor *monitor,
   if (file)
     {
       priv->file = g_object_ref (file);
-      gb_source_change_monitor_discover_repository (monitor);
-      gb_source_change_monitor_load_blob (monitor);
+      gb_source_change_monitor_reload (monitor);
     }
 
   g_object_notify_by_pspec (G_OBJECT (monitor), gParamSpecs [PROP_FILE]);
-
-  gb_source_change_monitor_queue_parse (monitor);
 
   EXIT;
 }
