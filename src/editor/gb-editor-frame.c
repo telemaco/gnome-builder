@@ -23,6 +23,7 @@
 #include "gb-editor-frame.h"
 #include "gb-editor-frame-private.h"
 #include "gb-log.h"
+#include "gb-string.h"
 #include "gb-widget.h"
 #include "gb-workbench.h"
 
@@ -119,7 +120,7 @@ gb_editor_frame_move_next_match (GbEditorFrame *frame)
 
 found_match:
   gtk_text_buffer_select_range (GTK_TEXT_BUFFER (priv->document),
-                                &match_begin, &match_end);
+                                &match_begin, &match_begin);
   gtk_text_view_scroll_to_iter (GTK_TEXT_VIEW (priv->source_view),
                                 &match_begin, 0.0, TRUE, 0.5, 0.5);
 
@@ -169,11 +170,101 @@ gb_editor_frame_move_previous_match (GbEditorFrame *frame)
 
 found_match:
   gtk_text_buffer_select_range (GTK_TEXT_BUFFER (priv->document),
-                                &match_begin, &match_end);
+                                &match_begin, &match_begin);
   gtk_text_view_scroll_to_iter (GTK_TEXT_VIEW (priv->source_view),
                                 &match_begin, 0.0, TRUE, 0.5, 0.5);
 
   EXIT;
+}
+
+static void
+gb_editor_frame_set_position_label (GbEditorFrame *frame,
+                                    const gchar   *text)
+{
+  GbEditorFramePrivate *priv;
+
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+
+  priv = frame->priv;
+
+  if (!text || !*text)
+    {
+      if (priv->search_entry_tag)
+        {
+          gd_tagged_entry_remove_tag (priv->search_entry,
+                                      priv->search_entry_tag);
+          g_clear_object (&priv->search_entry_tag);
+        }
+      return;
+    }
+
+  if (!priv->search_entry_tag)
+    {
+      priv->search_entry_tag = gd_tagged_entry_tag_new ("");
+      gd_tagged_entry_tag_set_style (priv->search_entry_tag,
+                                     "gb-search-entry-occurrences-tag");
+      gd_tagged_entry_add_tag (priv->search_entry,
+                               priv->search_entry_tag);
+    }
+
+  gd_tagged_entry_tag_set_label (priv->search_entry_tag, text);
+}
+
+static void
+gb_editor_frame_update_search_position_label (GbEditorFrame *frame)
+{
+  GbEditorFramePrivate *priv;
+  GtkStyleContext *context;
+  GtkTextIter begin;
+  GtkTextIter end;
+  const gchar *search_text;
+  gchar *text;
+  gint count;
+  gint pos;
+
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+
+  priv = frame->priv;
+
+  gtk_text_buffer_get_selection_bounds (GTK_TEXT_BUFFER (priv->document),
+                                        &begin, &end);
+  pos = gtk_source_search_context_get_occurrence_position (
+    priv->search_context, &begin, &end);
+  count = gtk_source_search_context_get_occurrences_count (
+    priv->search_context);
+
+  if ((pos == -1) || (count == -1))
+    {
+      /*
+       * We are not yet done scanning the buffer.
+       * We will be updated when we know more, so just hide it for now.
+       */
+      gb_editor_frame_set_position_label (frame, NULL);
+      return;
+    }
+
+  context = gtk_widget_get_style_context (GTK_WIDGET (priv->search_entry));
+  search_text = gtk_entry_get_text (GTK_ENTRY (priv->search_entry));
+
+  if ((count == 0) && !gb_str_empty0 (search_text))
+    gtk_style_context_add_class (context, GTK_STYLE_CLASS_ERROR);
+  else
+    gtk_style_context_remove_class (context, GTK_STYLE_CLASS_ERROR);
+
+  text = g_strdup_printf (_("%u of %u"), pos, count);
+  gb_editor_frame_set_position_label (frame, text);
+  g_free (text);
+}
+
+static void
+gb_editor_frame_on_search_occurrences_notify (GbEditorFrame          *frame,
+                                              GParamSpec             *pspec,
+                                              GtkSourceSearchContext *search_context)
+{
+  g_return_if_fail (GB_IS_EDITOR_FRAME (frame));
+  g_return_if_fail (GTK_SOURCE_IS_SEARCH_CONTEXT (search_context));
+
+  gb_editor_frame_update_search_position_label (frame);
 }
 
 /**
@@ -208,6 +299,8 @@ gb_editor_frame_on_cursor_moved (GbEditorFrame    *frame,
   text = g_strdup_printf (_("Line %u, Column %u"), ln + 1, col + 1);
   nautilus_floating_bar_set_primary_label (frame->priv->floating_bar, text);
   g_free (text);
+
+  gb_editor_frame_update_search_position_label (frame);
 }
 
 /**
@@ -272,6 +365,12 @@ gb_editor_frame_connect (GbEditorFrame    *frame,
   g_object_set (priv->search_highlighter,
                 "search-context", priv->search_context,
                 NULL);
+
+  g_signal_connect_object (priv->search_context,
+                           "notify::occurrences-count",
+                           G_CALLBACK (gb_editor_frame_on_search_occurrences_notify),
+                           frame,
+                           G_CONNECT_SWAPPED);
 
   /*
    * Connect to cursor-moved signal to update cursor position label.
