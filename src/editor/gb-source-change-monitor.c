@@ -440,7 +440,7 @@ gb_source_change_monitor_discover_repository (GbSourceChangeMonitor *monitor)
 
       if (!repo_file)
         {
-          g_message (_("Failed to locate a gir repository: %s"), error->message);
+          g_message (_("Failed to locate a git repository: %s"), error->message);
           g_clear_error (&error);
           EXIT;
         }
