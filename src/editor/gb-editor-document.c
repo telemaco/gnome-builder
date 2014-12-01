@@ -468,6 +468,7 @@ gb_editor_document_save_cb (GObject      *object,
                             gpointer      user_data)
 {
   GtkSourceFileSaver *saver = (GtkSourceFileSaver *)object;
+  GbSourceChangeMonitor *change_monitor;
   GbEditorDocument *document;
   GError *error = NULL;
   GTask *task = user_data;
@@ -493,6 +494,9 @@ gb_editor_document_save_cb (GObject      *object,
    */
   document = g_task_get_source_object (task);
   gtk_text_buffer_set_modified (GTK_TEXT_BUFFER (document), FALSE);
+
+  change_monitor = gb_editor_document_get_change_monitor (document);
+  gb_source_change_monitor_reload (change_monitor);
 
   g_task_return_boolean (task, TRUE);
 
