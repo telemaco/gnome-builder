@@ -88,7 +88,7 @@ gb_editor_tab_save_cb (GObject      *source_object,
 
   if (!gb_editor_document_save_finish (document, result, &error))
     {
-      g_print ("%s", error->message);
+      g_print ("%s\n", error->message);
       //gb_editor_tab_set_error (tab, error);
       g_clear_error (&error);
     }
@@ -218,7 +218,7 @@ gb_editor_tab_open_file_cb (GObject      *source_object,
 
   if (!gb_editor_document_load_finish (document, result, &error))
     {
-      g_print ("%s", error->message);
+      g_print ("%s\n", error->message);
       //gb_editor_tab_set_error (tab, error);
       g_clear_error (&error);
     }
