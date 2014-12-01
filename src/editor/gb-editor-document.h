@@ -84,6 +84,7 @@ void                   gb_editor_document_save_async         (GbEditorDocument  
 gboolean               gb_editor_document_save_finish        (GbEditorDocument       *document,
                                                               GAsyncResult           *result,
                                                               GError                **error);
+void                   gb_editor_document_reformat           (GbEditorDocument       *document);
 
 G_END_DECLS
 

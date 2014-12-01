@@ -59,6 +59,7 @@ void              gb_editor_frame_set_document (GbEditorFrame    *frame,
                                                 GbEditorDocument *document);
 void              gb_editor_frame_find         (GbEditorFrame    *frame,
                                                 const gchar      *search_text);
+void              gb_editor_frame_reformat     (GbEditorFrame    *frame);
 
 G_END_DECLS
 

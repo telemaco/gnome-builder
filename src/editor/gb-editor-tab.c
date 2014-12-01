@@ -504,6 +504,17 @@ gb_editor_tab_find (GbEditorTab *tab)
   gb_editor_frame_find (frame, NULL);
 }
 
+void
+gb_editor_tab_reformat (GbEditorTab *tab)
+{
+  GbEditorFrame *frame;
+
+  g_return_if_fail (GB_IS_EDITOR_TAB (tab));
+
+  frame = gb_editor_tab_get_last_frame (tab);
+  gb_editor_frame_reformat (frame);
+}
+
 static void
 gb_editor_tab_constructed (GObject *object)
 {
