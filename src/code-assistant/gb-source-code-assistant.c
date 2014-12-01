@@ -81,6 +81,19 @@ gb_source_code_assistant_new (GtkTextBuffer *buffer)
                        NULL);
 }
 
+static const gchar *
+remap_language (const gchar *lang_id)
+{
+  g_return_val_if_fail (lang_id, NULL);
+
+  if (g_str_equal (lang_id, "chdr") ||
+      g_str_equal (lang_id, "objc") ||
+      g_str_equal (lang_id, "cpp"))
+    return "c";
+
+  return lang_id;
+}
+
 static void
 gb_source_code_assistant_inc_active (GbSourceCodeAssistant *assistant,
                                      gint                   amount)
@@ -155,7 +168,7 @@ gb_source_code_assistant_load_service (GbSourceCodeAssistant *assistant)
   if (!language)
     EXIT;
 
-  lang_id = gtk_source_language_get_id (language);
+  lang_id = remap_language (gtk_source_language_get_id (language));
 
   name = g_strdup_printf ("org.gnome.CodeAssist.v1.%s", lang_id);
   object_path = g_strdup_printf ("/org/gnome/CodeAssist/v1/%s", lang_id);
@@ -308,7 +321,7 @@ gb_source_code_assistant_parse_cb (GObject      *source_object,
   if (!language)
     GOTO (failure);
 
-  lang_id = gtk_source_language_get_id (language);
+  lang_id = remap_language (gtk_source_language_get_id (language));
   name = g_strdup_printf ("org.gnome.CodeAssist.v1.%s", lang_id);
 
   if (priv->document_proxy)
