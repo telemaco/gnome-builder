@@ -281,8 +281,7 @@ gb_workbench_navigation_changed (GbWorkbench      *workbench,
       workspace = gb_navigation_item_get_workspace (item);
       if (workspace)
         gtk_stack_set_visible_child (priv->stack, GTK_WIDGET (workspace));
-
-      gb_navigation_item_emit_activate (item);
+      gb_navigation_item_activate (item);
     }
 }
 
