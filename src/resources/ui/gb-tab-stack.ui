@@ -34,6 +34,8 @@
         </child>
         <child>
           <object class="GtkStack" id="controls">
+            <property name="homogeneous">false</property>
+            <property name="hexpand">false</property>
             <property name="visible">true</property>
           </object>
         </child>
